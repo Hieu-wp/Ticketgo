@@ -1,0 +1,151 @@
+ :root {
+            --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --neon-purple: #a855f7;
+            --neon-pink: #f43f5e;
+            --neon-gold: #fbbf24;
+            --dark-purple: #1e1b4b;
+            --light-bg: #f8fafc;
+            --seat-setup: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-bg);
+            color: #1e293b;
+        }
+
+        /* Sidebar điều hướng */
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            background: #0f0c29;
+            color: #fff;
+            padding-top: 20px;
+            z-index: 100;
+        }
+
+        .sidebar .brand {
+            padding: 10px 25px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--purple-radiant);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar .nav-link {
+            color: #94a3b8;
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(168, 85, 247, 0.15);
+            border-left: 4px solid var(--neon-purple);
+            text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Vùng nội dung chính */
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        /* Thẻ phòng chiếu */
+        .room-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .room-card:hover {
+            border-color: var(--neon-purple);
+            box-shadow: 0 10px 25px rgba(168, 85, 247, 0.05);
+            transform: translateY(-2px);
+        }
+
+        /* GIẢ LẬP MÀN HÌNH RẠP CHIẾU */
+        .cinema-screen {
+            width: 70%;
+            margin: 0 auto 20px auto;
+            padding: 6px 0;
+            background: #e2e8f0;
+            border-bottom: 4px solid #6366f1;
+            border-radius: 0 0 50% 50% / 0 0 10px 10px; /* Tạo hiệu ứng màn hình cong nhẹ */
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+            font-size: 10px;
+            font-weight: 700;
+            color: #475569;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Lưới ghế */
+        .dynamic-seat-grid {
+            display: grid;
+            gap: 6px;
+            max-width: 440px;
+            margin: 0 auto;
+            max-height: 255px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .seat-preview-box {
+            aspect-ratio: 1.1;
+            background-color: var(--seat-setup);
+            border-radius: 5px;
+            font-size: 9px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            user-select: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .seat-preview-box:hover {
+            border-color: var(--neon-purple);
+            transform: scale(1.05);
+        }
+
+        /* Ghế VIP Style */
+        .seat-preview-box.vip {
+            background: var(--neon-gold) !important;
+            color: #78350f !important;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }

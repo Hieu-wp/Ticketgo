@@ -1,0 +1,304 @@
+:root {
+    --radiant-purple: linear-gradient(135deg, #a951ed 0%, #6f42c1 100%);
+    --soft-purple: #f3ebff;
+    --purple-primary: #6f42c1;
+    --neon-purple: #a951ed; /* Thêm biến bị thiếu */
+    --light-bg: #f8f9fa;    /* Thêm biến bị thiếu */
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--light-bg);
+}
+
+/* Sidebar điều hướng */
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    background: #0f0c29;
+    color: #fff;
+    padding-top: 20px;
+    z-index: 100;
+}
+
+.sidebar .brand {
+    padding: 10px 25px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    /* ĐÃ SỬA: Dùng đúng tên biến --radiant-purple */
+    background: var(--radiant-purple);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar .nav-link {
+    color: #94a3b8;
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background: rgba(168, 85, 247, 0.15);
+    border-left: 4px solid var(--neon-purple);
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 260px;
+    padding: 40px;
+    min-height: 100vh;
+}
+
+/* Movie Card 3 cột/hàng */
+.movie-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(111, 66, 193, 0.04);
+    transition: transform 0.3s ease;
+    position: relative;
+    height: 100%;
+}
+
+.movie-card:hover {
+    transform: translateY(-8px);
+}
+
+/* Khung ảnh tỷ lệ 3:4 cố định không móp ảnh */
+.poster-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 133.33%;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+.movie-poster {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Cấu hình Form & SỬA LỖI SELECTION */
+.config-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: none;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2b2b2b;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+
+/* Sửa triệt để màu nền sáng cho Select, Input & Option */
+.form-control, .form-select, .editform {
+    border-radius: 10px;
+    padding: 10px 14px;
+    border: 1px solid #ced4da !important;
+    font-size: 0.95rem;
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+/* Màu nền trắng và chữ tối cho danh sách xổ xuống */
+.form-select option, select option {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+.form-control:focus, .form-select:focus, .editform:focus {
+    border-color: #a951ed !important;
+    box-shadow: 0 0 0 3px rgba(169, 81, 237, 0.2) !important;
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    outline: none;
+}
+
+.btn-radiant {
+    background: var(--radiant-purple);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.section-title {
+    border-left: 4px solid #a951ed;
+    padding-left: 12px;
+    margin-bottom: 20px;
+}
+
+/* Khung chứa Upload / Preview ảnh */
+.upload-box-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 133.33%;
+    border: 2px dashed #c0a3f5;
+    background: var(--soft-purple);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.upload-box-wrapper:hover {
+    background: #ebdfff;
+}
+
+.upload-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 100%;
+    padding: 0 20px;
+    z-index: 1;
+}
+
+.upload-preview-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 2;
+    display: none;
+}
+
+.add-movie-form .form-label {
+    color: #2b2b2b;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.add-movie-form .form-control,
+.add-movie-form .form-select {
+    background-color: #ffffff !important;
+    border: 1px solid #e2d9f3;
+    color: #212529 !important;
+}
+
+/* Form chỉnh sửa phim */
+.neon-card {
+    background: #ffffff !important;
+    border: 1px solid #e2d5f7 !important;
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.12), 0 0 15px rgba(188, 52, 250, 0.08);
+    position: relative;
+}
+
+.btn-close-neon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+.btn-close-neon:hover {
+    color: #8a2be2;
+    text-shadow: 0 0 8px rgba(138, 43, 226, 0.4);
+    transform: scale(1.1);
+}
+
+.neon-text {
+    color: #8a2be2 !important;
+    text-shadow: 0 0 8px rgba(138, 43, 226, 0.25);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: none;
+    cursor: pointer;
+}
+
+.avatar-upload {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+}
+.avatar-preview {
+    width: 100%;
+    height: 280px;
+    position: relative;
+    border-radius: 12px;
+    border: 2px dashed #8a2be2;
+    box-shadow: 0 0 10px rgba(138, 43, 226, 0.15);
+    overflow: hidden;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #f8f9fa;
+}
+.avatar-edit {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    z-index: 1;
+}
+.avatar-edit input {
+    display: none;
+}
+.avatar-edit label {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(45deg, #8a2be2, #df73ff);
+    box-shadow: 0 0 10px rgba(223, 115, 255, 0.5);
+    color: #fff;
+    text-align: center;
+    line-height: 36px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.avatar-edit label:hover {
+    transform: scale(1.1);
+}
+
+.btn-neon {
+    background: linear-gradient(45deg, #8a2be2, #df73ff);
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    font-weight: bold;
+    font-size: 1.05rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+}
+.btn-neon:hover {
+    background: linear-gradient(45deg, #df73ff, #8a2be2);
+    box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5);
+}

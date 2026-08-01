@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Suất Chiếu & Phòng Vé - CineAstra</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/Showtime.css">
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> TICKETGO CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
+        <a href="/" class="nav-link active"><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phong chieu</a>
+        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Quản Lý Lịch Chiếu
+        </h3>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 mb-4 align-items-center">
+        <button class="btn top-action-btn" data-bs-toggle="modal" data-bs-target="#addShowtimeModal">
+            <i class="fa-solid fa-plus text-primary"></i> Thêm lịch chiếu mới
+        </button>
+        <button class="btn top-action-btn btn-prime" data-bs-toggle="modal" data-bs-target="#createTicketModal">
+            <i class="fa-solid fa-ticket-simple"></i> Cấu hình phát hành vé
+        </button>
+
+        <!-- Bộ lọc trạng thái -->
+        <div class="ms-auto filter-box">
+            <i class="fa-solid fa-sliders text-purple fs-6"></i>
+            <span class="fw-semibold small text-secondary">Lọc theo:</span>
+            <select id="statusFilter" class="form-select form-select-sm filter-select" onchange="renderShowtimeCards()">
+                <option value="all">Tất cả suất chiếu</option>
+                <option value="empty">Suất chiếu còn trống</option>
+                <option value="assigned">Suất chiếu đã thiết lập vé</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Container Card Danh Sách -->
+    <div class="row g-4" id="cards-display-container"></div>
+</div>
+
+<!-- MODAL 1: THÊM LỊCH CHIẾU MỚI -->
+<div class="modal fade" id="addShowtimeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header modal-header-gradient border-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-plus me-2"></i>Tạo Khung Giờ Chiếu Hệ Thống</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addShowtimeForm">
+                    <div class="row g-3">
+                        <!-- Chọn phim & Thời lượng -->
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold text-dark">Tên phim áp dụng</label>
+                            <!-- 📌 [name="phimId"] tương ứng ShowtimeRequestDto.phimId -->
+                            <select class="form-select py-2 border-dark fw-medium" id="add-select-movie" name="phimId" onchange="onMovieSelected()" required>
+                                <option value="" selected disabled>-- Đang tải danh sách phim... --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold text-dark">Thời lượng phim (Phút)</label>
+                            <input type="number" class="form-control py-2" id="add-duration" placeholder="Thời lượng tự động điền" min="1" readonly required>
+                        </div>
+
+                        <!-- Công tắc lặp lại -->
+                        <div class="col-md-12 my-2">
+                            <div class="form-check form-switch p-3 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                                <div class="ms-2">
+                                    <label class="form-check-label fw-bold text-dark d-block" for="repeat-switch">Lặp lại suất chiếu thường nhật</label>
+                                    <small class="text-muted">Bật để áp dụng chuỗi giờ này cho nhiều ngày liên tiếp</small>
+                                </div>
+                                <!-- 📌 [name="lapLaiHangNgay"] tương ứng ShowtimeRequestDto.lapLaiHangNgay -->
+                                <input class="form-check-input fs-4 me-1" type="checkbox" id="repeat-switch" name="lapLaiHangNgay" onchange="toggleRepeatDateFields()">
+                            </div>
+                        </div>
+
+                        <!-- Lựa chọn ngày -->
+                        <div class="col-md-12" id="single-date-box">
+                            <label class="form-label fw-semibold">Chọn ngày áp dụng</label>
+                            <!-- 📌 [name="singleDate"] tương ứng ShowtimeRequestDto.singleDate -->
+                            <input type="date" class="form-control w-50" id="add-single-date" name="singleDate">
+                        </div>
+
+                        <div class="col-md-12 d-none" id="range-date-box">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-primary">Ngày bắt đầu chuỗi</label>
+                                    <!-- 📌 [name="ngayBatDau"] tương ứng ShowtimeRequestDto.ngayBatDau -->
+                                    <input type="date" class="form-control" id="add-start-date" name="ngayBatDau">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-danger">Ngày kết thúc chuỗi</label>
+                                    <!-- 📌 [name="ngayKetThuc"] tương ứng ShowtimeRequestDto.ngayKetThuc -->
+                                    <input type="date" class="form-control" id="add-end-date" name="ngayKetThuc">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nhập số ca -->
+                        <div class="col-md-12 mt-3">
+                            <div class="p-3 bg-light border rounded-3">
+                                <label class="form-label fw-bold text-dark"><i class="fa-solid fa-calculator me-2 text-purple"></i>Nhập số lượng ca chiếu trong ngày</label>
+                                <!-- 📌 [name="soSuatTrongNgay"] tương ứng ShowtimeRequestDto.soSuatTrongNgay -->
+                                <input type="number" id="input-slot-count" name="soSuatTrongNgay" class="form-control py-2 w-50" placeholder="Nhập số suất" min="1" oninput="generateShowtimeInputs()">
+                            </div>
+                        </div>
+
+                        <div id="dynamic-slots-container" class="col-md-12"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
+                <button type="button" class="btn btn-secondary fw-semibold px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveAddShowtime()">Lưu danh sách ca</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: CẤU HÌNH PHÁT HÀNH VÉ -->
+<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header modal-header-gradient border-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-ticket me-2"></i>Cấu Hình Phát Hành Vé</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createTicketForm">
+                    <div class="row g-3">
+                        <!-- Chọn phim -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Chọn Tên Phim</label>
+                            <select class="form-select py-2 border-dark fw-medium" id="ticket-select-movie" name="phimId" onchange="onMovieChangeInTicketForm()" required>
+                                <option value="" selected disabled>-- Đang tải danh sách phim... --</option>
+                            </select>
+                        </div>
+
+                        <!-- Chọn Ngày Chiếu -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-primary">Chọn Ngày Chiếu</label>
+                            <select class="form-select py-2 border-primary fw-medium" id="ticket-select-date" name="ngayChieu" onchange="onDateChangeInTicketForm()" required disabled>
+                                <option value="" selected disabled>-- Chọn ngày chiếu --</option>
+                            </select>
+                        </div>
+
+                        <!-- Chọn Danh Sách Suất Chiếu -->
+                        <div class="col-md-12 mt-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label fw-bold text-dark mb-0"><i class="fa-solid fa-clock me-2 text-primary"></i>Chọn Các Suất Chiếu Áp Dụng</label>
+                                <div class="form-check" id="select-all-wrapper" style="display: none;">
+                                    <input class="form-check-input" type="checkbox" id="select-all-slots" onchange="toggleSelectAllSlots(this)">
+                                    <label class="form-check-label fw-bold text-purple" for="select-all-slots">Chọn tất cả</label>
+                                </div>
+                            </div>
+                            <div id="ticket-checkboxes-container" class="p-3 bg-light border rounded-3 min-vh-10 d-flex flex-wrap gap-2">
+                                <span class="text-muted small">Vui lòng chọn Phim và Ngày chiếu để xem danh sách suất chiếu khả dụng.</span>
+                            </div>
+                        </div>
+
+                        <!-- Khung Thiết Lập Giá Vé -->
+                        <div class="col-md-12 mt-4">
+                            <div class="price-config-box">
+                                <h6 class="fw-bold text-purple mb-3"><i class="fa-solid fa-tags me-2"></i>Thiết Lập Mức Giá Vé Kích Hoạt</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold text-secondary">Đơn giá Vé Ghế Thường (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-lg border-secondary fw-bold text-dark" id="ticket-regular-price" name="regularPrice" placeholder="Ví dụ: 80000" oninput="calculateVipPricePreview()" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold text-dark">Tỉ giá phần trăm Ghế VIP (%)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control form-control-lg border-dark fw-bold text-dark" id="ticket-vip-percent" name="vipPercent" placeholder="Ví dụ: 20" value="20" oninput="calculateVipPricePreview()" required>
+                                            <span class="input-group-text bg-dark text-white fw-bold">%</span>
+                                        </div>
+                                        <small class="text-muted mt-1 d-block" id="vip-price-preview">Dự kiến giá ghế VIP: <strong class="text-dark">0 VNĐ</strong></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
+                <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary fw-semibold px-4" onclick="executeCreateTicket()">Phát hành vé chính thức</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/Showtime.js}"></script>
+</body>
+</html>

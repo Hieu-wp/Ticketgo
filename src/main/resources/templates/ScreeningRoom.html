@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Phòng Chiếu - CineAstra</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/ScreeningRoom.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
+        <a href="/" class="nav-link active"><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phong chieu</a>
+        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Quản Lý Phòng Chiếu</h3>
+        </div>
+        <button class="btn text-white fw-bold px-4 py-2 shadow-sm" style="background: var(--purple-radiant); border-radius: 12px;" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+            <i class="fa-solid fa-plus me-2"></i>Thêm phòng chiếu
+        </button>
+    </div>
+
+
+    <div class="row g-4" id="roomCardContainer">
+
+    </div>
+</div>
+
+<!-- MODAL THÊM PHÒNG CHIẾU -->
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 24px; border: none; overflow: hidden;">
+            <div class="modal-header border-0 bg-light p-4" style="background: var(--purple-radiant)">
+                <div>
+                    <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-square-plus me-2 text-white"></i>Thêm Phòng Chiếu Mới</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="addRoomForm">
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-5 border-end border-light">
+                            <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-info me-2"></i>Thông tin cơ bản</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Tên phòng chiếu</label>
+                                <input type="text" id="roomNameInput" class="form-control" placeholder="Nhập tên phòng chiếu" style="border-radius: 8px;" required>
+                            </div>
+
+                            <div class="bg-light p-3 rounded-3 mt-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small text-muted">Ghế Thường:</span>
+                                    <span class="small fw-bold" id="normalCount">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small text-warning">Ghế VIP:</span>
+                                    <span class="small fw-bold text-warning" id="vipCount">0</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold">Tổng ghế thực tế:</span>
+                                    <span class="fw-bold text-primary" id="totalCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-7">
+                            <h6 class="fw-bold mb-3 text-warning"><i class="fa-solid fa-border-all me-2"></i>Sơ đồ & Cấu hình lối đi</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Hàng ghế</label>
+                                    <input type="number" class="form-control form-control-sm"  id="rowsInput" min="1" max="15">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Cột ghế</label>
+                                    <input type="number" class="form-control form-control-sm"  id="colsInput" min="2" max="20">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Lối đi ở giữa</label>
+                                    <select class="form-select form-select-sm" id="layoutSelect">
+                                        <option value="none">Không có lối đi</option>
+                                        <option value="center" selected>Có lối đi</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 text-center mb-2">
+                                <div class="cinema-screen">MÀN HÌNH</div>
+                                <div class="dynamic-seat-grid" id="seatGridPreview"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-center gap-4 mt-3">
+                                <div class="legend-item"><div class="legend-box" style="background: var(--seat-setup);"></div> Ghế thường</div>
+                                <div class="legend-item"><div class="legend-box" style="background: var(--neon-gold);"></div> Ghế VIP</div>
+                                <div class="legend-item"><i class="fa-solid fa-mouse-pointer" style="font-size: 10px;"></i> Click ghế để chọn nhanh</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3">
+                    <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn text-white fw-bold px-4" style="background: var(--purple-radiant); border-radius: 10px;">Lưu phòng chiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- MODAL chinh sua phong -->
+<div class="modal fade" id="editRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 24px; border: none; overflow: hidden;">
+            <div class="modal-header border-0 bg-light p-4" style="background: var(--purple-radiant)">
+                <div>
+                    <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-square-plus me-2 text-white"></i>Chỉnh sửa phòng chiếu </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="editRoomForm">
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-5 border-end border-light">
+                            <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-info me-2"></i>Thông tin cơ bản</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Tên phòng chiếu</label>
+                                <input type="text" id="editroomNameInput" class="form-control" placeholder="Nhập tên phòng chiếu" style="border-radius: 8px;" required>
+                            </div>
+
+                            <div class="bg-light p-3 rounded-3 mt-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small text-muted">Ghế Thường:</span>
+                                    <span class="small fw-bold" id="editnormalCount">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small text-warning">Ghế VIP:</span>
+                                    <span class="small fw-bold text-warning" id="editvipCount">0</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold">Tổng ghế thực tế:</span>
+                                    <span class="fw-bold text-primary" id="edittotalCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-7">
+                            <h6 class="fw-bold mb-3 text-warning"><i class="fa-solid fa-border-all me-2"></i>Sơ đồ & Cấu hình lối đi</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Hàng ghế</label>
+                                    <input type="number" class="form-control form-control-sm" id="editrowsInput" min="1" max="15">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Cột ghế</label>
+                                    <input type="number" class="form-control form-control-sm"  id="editcolsInput" min="2" max="20">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Lối đi ở giữa</label>
+                                    <select class="form-select form-select-sm" id="editlayoutSelect">
+                                        <option value="none">Không có lối đi</option>
+                                        <option value="center" selected>Có lối đi</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 text-center mb-2">
+                                <div class="cinema-screen">MÀN HÌNH</div>
+                                <div class="dynamic-seat-grid" id="editseatGridPreview"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-center gap-4 mt-3">
+                                <div class="legend-item"><div class="legend-box" style="background: var(--seat-setup);"></div> Ghế thường</div>
+                                <div class="legend-item"><div class="legend-box" style="background: var(--neon-gold);"></div> Ghế VIP</div>
+                                <div class="legend-item"><i class="fa-solid fa-mouse-pointer" style="font-size: 10px;"></i> Click ghế để chọn nhanh</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3">
+                    <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn text-white fw-bold px-4" style="background: var(--purple-radiant); border-radius: 10px;">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thông Báo Dùng Chung -->
+<div class="modal fade" id="notifyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg p-4 text-center rounded-4" style="background: #ffffff; color: #1e293b;">
+            <div class="modal-body p-0">
+
+                <div id="notifyIconContainer" class="mb-3">
+                    <i id="notifyIcon" class="bi bi-check-circle-fill text-primary" style="font-size: 3.5rem;"></i>
+                </div>
+             <h4 id="notifyTitle" class="fw-bold text-primary mb-2">Thành Công!</h4>
+                <p id="notifyMessage" class="mb-4 text-secondary fs-6">Thông tin đã được cập nhật vào hệ thống.</p>
+                <button type="button" id="notifyConfirmBtn" class="btn btn-primary w-100 rounded-3 fw-semibold py-2 shadow-sm" data-bs-dismiss="modal" style="background-color: #0d6efd; border: none;">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/ScreeningRoom.js}"></script>
+</body>
+</html>
