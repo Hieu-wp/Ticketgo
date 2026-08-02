@@ -1,14 +1,17 @@
 package com.example.ticketgo.service;
 
-import com.example.ticketgo.dto.request.ShowtimeRequest;
-import com.example.ticketgo.dto.SlotDto;
+import com.example.ticketgo.dto.request.ShowtimeCreateRequest;
+import com.example.ticketgo.dto.request.ShowtimeUpdateRequest;
+import com.example.ticketgo.dto.response.*;
+import com.example.ticketgo.entity.Combo;
 import com.example.ticketgo.entity.Film;
 import com.example.ticketgo.entity.ScreeningRoom;
-import com.example.ticketgo.entity.ScreeningSlot;
 import com.example.ticketgo.entity.Showtime;
+import com.example.ticketgo.exception.InvalidInputException;
+import com.example.ticketgo.exception.ResourceNotFoundException;
+import com.example.ticketgo.repository.ComboRepository;
 import com.example.ticketgo.repository.FilmRepository;
 import com.example.ticketgo.repository.ScreeningRoomRepository;
-import com.example.ticketgo.repository.ScreeningSlotRepository;
 import com.example.ticketgo.repository.ShowtimeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,193 +20,247 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class ShowtimeService {
 
-    private final FilmRepository movieRepository;
-    private final ScreeningRoomRepository screeningRoomRepository;
     private final ShowtimeRepository showtimeRepository;
-    private final ScreeningSlotRepository screeningSlotRepository;
+    private final FilmRepository movieRepository;
+    private final ScreeningRoomRepository roomRepository;
+    private final ComboRepository comboRepository;
+    private final ComboService comboService;
 
-    // ==========================================================
-    // 1. TẠO LỊCH CHIẾU VÀ CÁC SUẤT CHIẾU CON (SLOTS)
-    // ==========================================================
+
+    // 1. CHỨC NĂNG THÊM MỚI (Tạo đơn hoặc tạo hàng loạt theo chuỗi lặp)
+
     @Transactional
-    public void createShowtime(ShowtimeRequest request) {
-
-        // 1.1 Kiểm tra null request và phim
-        if (request == null) {
-            throw new IllegalArgumentException("Dữ liệu gửi lên không được rỗng!");
-        }
-        if (request.getPhimId() == null || request.getPhimId().isBlank()) {
-            throw new IllegalArgumentException("Vui lòng chọn phim áp dụng!");
-        }
-
-        Film movie = movieRepository.findById((request.getPhimId()))
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phim trong hệ thống!"));
-
-        // 1.2 Kiểm tra logic ngày tháng
-        boolean isRepeat = Boolean.TRUE.equals(request.getLapLaiHangNgay());
+    public List<ShowtimeResponse> createShowtimes(ShowtimeCreateRequest request) {
         LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
 
-        LocalDate startDate = isRepeat ? request.getNgayBatDau() : request.getSingleDate();
-        LocalDate endDate = isRepeat ? request.getNgayKetThuc() : request.getSingleDate();
+        Film movie = movieRepository.findById(request.getMovieId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim!"));
 
-        if (startDate == null) {
-            throw new IllegalArgumentException("Vui lòng chọn ngày áp dụng!");
-        }
+        ScreeningRoom room = roomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng chiếu!"));
 
-        // Không được chọn ngày trong quá khứ
-        if (startDate.isBefore(today)) {
-            throw new IllegalArgumentException("Ngày bắt đầu chiếu không được là ngày trong quá khứ!");
-        }
+        validatePrices(request.getRegularPrice(), request.getVipPercent());
 
-        if (isRepeat) {
-            if (endDate == null) {
-                throw new IllegalArgumentException("Vui lòng chọn ngày kết thúc chuỗi chiếu!");
+        // Xử lý danh sách ngày
+        List<LocalDate> datesToSchedule = new ArrayList<>();
+        if (Boolean.TRUE.equals(request.getIsRepeat())) {
+            if (request.getStartDate() == null || request.getEndDate() == null) {
+                throw new InvalidInputException("Vui lòng chọn ngày bắt đầu và kết thúc chuỗi lặp!");
             }
-            if (endDate.isBefore(startDate)) {
-                throw new IllegalArgumentException("Ngày kết thúc chuỗi phải lớn hơn hoặc bằng ngày bắt đầu!");
+            if (request.getStartDate().isBefore(today)) {
+                throw new InvalidInputException("Ngày bắt đầu không được nhỏ hơn ngày hiện tại!");
             }
-        }
-
-        // 1.3 Kiểm tra số ca chiếu
-        List<SlotDto> slots = request.getSlots();
-        if (slots == null || slots.isEmpty()) {
-            throw new IllegalArgumentException("Danh sách ca chiếu không được để trống!");
-        }
-        if (request.getSoSuatTrongNgay() == null || request.getSoSuatTrongNgay() <= 0) {
-            throw new IllegalArgumentException("Số suất chiếu trong ngày phải lớn hơn 0!");
-        }
-
-        // 1.4 Kiểm tra chi tiết từng Ca Chiếu (Slot)
-        boolean isSingleDateToday = (!isRepeat && startDate.equals(today));
-
-        for (int i = 0; i < slots.size(); i++) {
-            SlotDto slot = slots.get(i);
-            int slotNumber = i + 1;
-
-            if (slot.getPhongId() == null || slot.getPhongId().isBlank()) {
-                throw new IllegalArgumentException("Chưa chọn phòng chiếu cho ca thứ #" + slotNumber);
-            }
-            if (slot.getGioBatDau() == null) {
-                throw new IllegalArgumentException("Chưa chọn giờ bắt đầu cho ca thứ #" + slotNumber);
+            if (request.getEndDate().isBefore(request.getStartDate())) {
+                throw new InvalidInputException("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu!");
             }
 
-            // Nếu chỉ chiếu 1 ngày VÀ ngày đó là HÔM NAY -> Giờ chiếu phải lớn hơn hoặc bằng giờ hiện tại
-            if (isSingleDateToday && slot.getGioBatDau().isBefore(now)) {
-                throw new IllegalArgumentException(
-                        String.format("Ca thứ #%d (%s) không được nhỏ hơn giờ hiện tại (%s) do ngày chiếu là hôm nay!",
-                                slotNumber, slot.getGioBatDau(), now.toString().substring(0, 5))
-                );
+            LocalDate current = request.getStartDate();
+            while (!current.isAfter(request.getEndDate())) {
+                datesToSchedule.add(current);
+                current = current.plusDays(1);
+            }
+        } else {
+            if (request.getSingleDate() == null || request.getSingleDate().isBefore(today)) {
+                throw new InvalidInputException("Ngày chiếu không hợp lệ hoặc đã ở quá khứ!");
+            }
+            datesToSchedule.add(request.getSingleDate());
+        }
+
+        // Lấy danh sách Combo tùy chọn
+        List<Combo> selectedCombos = getCombosFromIds(request.getComboIds());
+        List<Showtime> createdList = new ArrayList<>();
+
+        for (LocalDate showDate : datesToSchedule) {
+            for (LocalTime startTime : request.getStartTimes()) {
+                LocalTime endTime = startTime.plusMinutes(movie.getDuration());
+
+                // Kiểm tra trùng
+                if (showtimeRepository.existsOverlappingShowtime(room.getId(), showDate, startTime, endTime)) {
+                    throw new InvalidInputException(String.format(
+                            "Phòng '%s' đã có suất chiếu trùng khung giờ %s - %s ngày %s!",
+                            room.getTenPhong(), startTime, endTime, showDate));
+                }
+
+                Showtime showtime = Showtime.builder()
+                        .movie(movie)
+                        .room(room)
+                        .showDate(showDate)
+                        .startTime(startTime)
+                        .endTime(endTime)
+                        .regularPrice(request.getRegularPrice())
+                        .vipPercent(request.getVipPercent())
+                        .status("ASSIGNED")
+                        .combos(selectedCombos)
+                        .build();
+
+                createdList.add(showtimeRepository.save(showtime));
             }
         }
 
-        // 2. THỰC HIỆN LƯU DATABASE KHI DỮ LIỆU ĐÃ HỢP LỆ
-        Showtime showtime = new Showtime();
-        showtime.setMovie(movie);
-        showtime.setLapLaiHangNgay(isRepeat);
-        showtime.setNgayBatDau(startDate);
-        showtime.setNgayKetThuc(endDate);
-        showtime.setSoSuatTrongNgay(slots.size());
-
-        Showtime savedShowtime = showtimeRepository.save(showtime);
-
-        List<ScreeningSlot> slotsToSave = new ArrayList<>();
-        LocalDate currentDate = startDate;
-
-        while (!currentDate.isAfter(endDate)) {
-            for (SlotDto slotDto : slots) {
-                // Do ID của ScreeningRoom là String nên truyền trực tiếp slotDto.getPhongId()
-                ScreeningRoom room = screeningRoomRepository.findById(slotDto.getPhongId())
-                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phòng chiếu id: " + slotDto.getPhongId()));
-
-                ScreeningSlot slot = new ScreeningSlot();
-                slot.setShowtime(savedShowtime);
-                slot.setRoom(room);
-                slot.setGioBatDau(slotDto.getGioBatDau());
-                slot.setNgayChieu(currentDate);
-
-                slotsToSave.add(slot);
-            }
-            currentDate = currentDate.plusDays(1);
-        }
-
-        screeningSlotRepository.saveAll(slotsToSave);
+        return createdList.stream().map(this::mapToResponse).toList();
     }
 
-    // ==========================================================
-    // 2. LẤY TẤT CẢ DỮ LIỆU SUẤT CHIẾU CHO FRONTEND
-    // ==========================================================
+    // =========================================================================
+    // 2. CHỨC NĂNG LOAD DỮ LIỆU LÊN CARD (Lấy danh sách / Chi tiết)
+    // =========================================================================
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getAllShowtimes() {
-        List<ScreeningSlot> slots = screeningSlotRepository.findAll();
-        List<Map<String, Object>> responseList = new ArrayList<>();
-
-        for (ScreeningSlot slot : slots) {
-            Map<String, Object> map = new HashMap<>();
-
-            // ID suất chiếu
-            map.put("id", String.valueOf(slot.getId()));
-
-            // Thông tin Phim (sử dụng getTenFilm() và getThoiLuong())
-            Film movie = (slot.getShowtime() != null) ? slot.getShowtime().getMovie() : null;
-            if (movie != null) {
-                map.put("movieId", String.valueOf(movie.getId()));
-                map.put("movie", movie.getTitle());
-                map.put("duration", movie.getDuration());
-            } else {
-                map.put("movieId", "");
-                map.put("movie", "[ Chưa gán tên phim ]");
-                map.put("duration", 0);
-            }
-
-            // Thông tin Phòng (sử dụng getTenPhong() và getTongSoGhe())
-            ScreeningRoom room = slot.getRoom();
-            map.put("room", room != null ? room.getTenPhong() : "Chưa chọn phòng");
-            map.put("totalSeats", (room != null && room.getTongSoGhe() != null) ? room.getTongSoGhe() : 0);
-
-            // Thời gian & Ngày chiếu
-            map.put("date", slot.getNgayChieu() != null ? slot.getNgayChieu().toString() : "");
-            map.put("time", slot.getGioBatDau() != null ? slot.getGioBatDau().toString().substring(0, 5) : "");
-
-            // Trạng thái gán vé (Mặc định)
-            map.put("isAssigned", false);
-            map.put("ticketsSold", 0);
-
-            responseList.add(map);
+    public List<ShowtimeResponse> getAllShowtimes(String status) {
+        List<Showtime> list;
+        if ("ALL".equalsIgnoreCase(status) || status == null) {
+            list = showtimeRepository.findAll();
+        } else {
+            list = showtimeRepository.findByStatus(status.toUpperCase());
         }
-
-        return responseList;
+        return list.stream().map(this::mapToResponse).toList();
     }
 
+    // Dành riêng cho APP KHÁCH HÀNG: Chỉ lấy các suất chiếu không bị ẨN
+    @Transactional(readOnly = true)
+    public List<ShowtimeResponse> getCustomerShowtimes() {
+        return showtimeRepository.findByStatusNot("HIDDEN")
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
 
-    // 3. XÓA SUẤT CHIẾU THEO ID
+    @Transactional(readOnly = true)
+    public ShowtimeResponse getShowtimeById(String id) {
+        Showtime showtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu ID: " + id));
+        return mapToResponse(showtime);
+    }
 
+    // =========================================================================
+    // 3. CHỨC NĂNG SỬA SUẤT CHIẾU
+    // =========================================================================
     @Transactional
-    public void deleteShowtime(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("ID cần xóa không hợp lệ!");
+    public ShowtimeResponse updateShowtime(String id, ShowtimeUpdateRequest request) {
+        Showtime showtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu ID: " + id));
+
+        if (request.getShowDate().isBefore(LocalDate.now())) {
+            throw new InvalidInputException("Ngày chiếu không được ở quá khứ!");
         }
 
-        // Kiểm tra xem ID truyền lên là của ScreeningSlot (ca chiếu lẻ)
-        if (screeningSlotRepository.existsById(String.valueOf(id))) {
-            screeningSlotRepository.deleteById(String.valueOf(id));
-            return;
+        Film movie = movieRepository.findById(request.getMovieId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim!"));
+
+        ScreeningRoom room = roomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng chiếu!"));
+
+        validatePrices(request.getRegularPrice(), request.getVipPercent());
+
+        LocalTime endTime = request.getStartTime().plusMinutes(movie.getDuration());
+
+        // Kiểm tra trùng lịch (loại trừ chính suất chiếu đang sửa)
+        boolean isOverlapped = showtimeRepository.existsOverlappingShowtimeExcludingId(
+                room.getId(), request.getShowDate(), request.getStartTime(), endTime, id
+        );
+
+        if (isOverlapped) {
+            throw new InvalidInputException(String.format(
+                    "Khung giờ %s - %s ngày %s tại phòng '%s' bị trùng với suất chiếu khác!",
+                    request.getStartTime(), endTime, request.getShowDate(), room.getTenPhong()));
         }
 
-        // Hoặc nếu ID truyền lên là của Showtime mẹ (chuỗi ca chiếu)
-        if (showtimeRepository.existsById(String.valueOf(id))) {
-            showtimeRepository.deleteById(String.valueOf(id));
-            return;
+        // Cập nhật thông tin
+        showtime.setMovie(movie);
+        showtime.setRoom(room);
+        showtime.setShowDate(request.getShowDate());
+        showtime.setStartTime(request.getStartTime());
+        showtime.setEndTime(endTime);
+        showtime.setRegularPrice(request.getRegularPrice());
+        showtime.setVipPercent(request.getVipPercent());
+
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            showtime.setStatus(request.getStatus().toUpperCase());
         }
 
-        throw new IllegalArgumentException("Không tìm thấy ca chiếu hoặc lịch chiếu có ID: " + id);
+        showtime.setCombos(getCombosFromIds(request.getComboIds()));
+
+        Showtime updated = showtimeRepository.save(showtime);
+        return mapToResponse(updated);
+    }
+
+    // =========================================================================
+    // 4. CHỨC NĂNG XÓA SUẤT CHIẾU
+    // =========================================================================
+    @Transactional
+    public void deleteShowtime(String id) {
+        if (!showtimeRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Không tìm thấy suất chiếu để xóa ID: " + id);
+        }
+        showtimeRepository.deleteById(id);
+    }
+
+    // =========================================================================
+    // 5. CHỨC NĂNG ẨN / HIỆN SUẤT CHIẾU (Ẩn khỏi App Khách Hàng)
+    // =========================================================================
+    @Transactional
+    public ShowtimeResponse toggleHideShowtime(String id) {
+        Showtime showtime = showtimeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu ID: " + id));
+
+        // Nút toggle: Nếu đang HIDDEN thì mở lại ASSIGNED, ngược lại thì chuyển sang HIDDEN
+        if ("HIDDEN".equalsIgnoreCase(showtime.getStatus())) {
+            showtime.setStatus("ASSIGNED");
+        } else {
+            showtime.setStatus("HIDDEN");
+        }
+
+        Showtime updated = showtimeRepository.save(showtime);
+        return mapToResponse(updated);
+    }
+
+    // =========================================================================
+    // HELPER METHODS
+    // =========================================================================
+    private void validatePrices(Double regularPrice, Double vipPercent) {
+        if (regularPrice == null || regularPrice <= 0) {
+            throw new InvalidInputException("Đơn giá vé ghế thường phải > 0 VNĐ");
+        }
+        if (vipPercent == null || vipPercent < 0) {
+            throw new InvalidInputException("Phần trăm ghế VIP không được âm");
+        }
+    }
+
+    private List<Combo> getCombosFromIds(List<String> comboIds) {
+        if (comboIds != null && !comboIds.isEmpty()) {
+            return comboRepository.findAllById(comboIds);
+        }
+        return Collections.emptyList();
+    }
+
+    private ShowtimeResponse mapToResponse(Showtime showtime) {
+        Film movie = showtime.getMovie();
+        ScreeningRoom room = showtime.getRoom();
+
+        ResponseMovie movieRecord = new ResponseMovie(
+                movie.getId(), movie.getTitle(), movie.getDuration(), movie.getPosterUrl()
+        );
+
+        ResponseScreeningRoom roomRecord = new ResponseScreeningRoom(
+                room.getId(), room.getTenPhong(), room.getSoLuongGheThuong(),
+                room.getSoLuongGheVip(), room.getSoHangGhe(), room.getSoCotGhe(),
+                room.getTongSoGhe(), room.getCoLoiDi(), room.getSeatLayout()
+        );
+
+        List<ComboResponse> comboResponses = (showtime.getCombos() != null)
+                ? showtime.getCombos().stream().map(comboService::mapToResponse).toList()
+                : Collections.emptyList();
+
+        return new ShowtimeResponse(
+                showtime.getId(), movieRecord, roomRecord, showtime.getShowDate(),
+                showtime.getStartTime(), showtime.getEndTime(), showtime.getRegularPrice(),
+                showtime.getVipPercent(), showtime.getVipPrice(), showtime.getStatus(),
+                comboResponses
+        );
     }
 }

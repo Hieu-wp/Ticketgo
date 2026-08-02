@@ -1,212 +1,391 @@
- :root {
-            --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-            --neon-purple: #a855f7;
-            --dark-purple: #1e1b4b;
-            --light-bg: #f8fafc;
-        }
+:root {
+    --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+    --neon-purple: #a855f7;
+    --dark-purple: #1e1b4b;
+    --light-bg: #f8fafc;
+}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--light-bg);
-            color: #1e293b;
-        }
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--light-bg);
+    color: #1e293b;
+}
 
-        /* Sidebar */
-        .sidebar {
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 260px;
-            background: #0f0c29;
-            color: #fff;
-            padding-top: 20px;
-            z-index: 100;
-        }
+/* Sidebar Styling */
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    background: #0f0c29;
+    color: #fff;
+    padding-top: 20px;
+    z-index: 100;
+}
 
-        .sidebar .brand {
-            padding: 10px 25px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: var(--purple-radiant);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+.sidebar .brand {
+    padding: 10px 25px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: var(--purple-radiant);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-        .sidebar .nav-link {
-            color: #94a3b8;
-            padding: 12px 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
+.sidebar .nav-link {
+    color: #94a3b8;
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
 
-        .sidebar .nav-link.active {
-            color: #fff;
-            background: rgba(168, 85, 247, 0.15);
-            border-left: 4px solid var(--neon-purple);
-            text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
-        }
+.sidebar .nav-link:hover {
+    color: #fff;
+    background: rgba(168, 85, 247, 0.1);
+}
 
-        /* Content */
-        .main-content {
-            margin-left: 260px;
-            padding: 40px;
-        }
+.sidebar .nav-link.active {
+    color: #fff;
+    background: rgba(168, 85, 247, 0.15);
+    border-left: 4px solid var(--neon-purple);
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
 
-        .top-action-btn {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-weight: 600;
-            color: var(--dark-purple);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.2s ease;
-        }
+.main-content {
+    margin-left: 260px;
+    padding: 40px;
+}
 
-        .top-action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.1);
-            border-color: var(--neon-purple);
-        }
+/* Buttons Styling */
+.top-action-btn {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-weight: 600;
+    color: var(--dark-purple);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
 
-        .top-action-btn.btn-prime {
-            background: var(--purple-radiant);
-            color: white;
-            border: none;
-        }
+.top-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15);
+    border-color: var(--neon-purple);
+}
 
-        /* CSS cho bộ lọc trạng thái */
-        .filter-box {
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 6px 14px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+.top-action-btn.btn-prime {
+    background: var(--purple-radiant);
+    color: white;
+    border: none;
+}
 
-        .filter-box:hover, .filter-box:focus-within {
-            border-color: var(--neon-purple);
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.15);
-            transform: translateY(-1px);
-        }
+.top-action-btn.btn-prime:hover {
+    opacity: 0.95;
+    box-shadow: 0 6px 18px rgba(168, 85, 247, 0.35);
+}
 
-        .filter-select {
-            border: none !important;
-            background-color: transparent !important;
-            outline: none !important;
-            box-shadow: none !important;
-            font-weight: 600;
-            color: #1e293b;
-            cursor: pointer;
-            padding-right: 24px;
-        }
+.top-action-btn.btn-orange {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: white;
+    border: none;
+}
 
-        /* Poster Image Container - Tăng nhẹ chiều cao để vừa vặn layout mới */
-        .poster-container {
-            width: 80px;
-            height: 105px;
-            background: #f1f5f9;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            overflow: hidden;
-            flex-shrink: 0;
-            border: 1px solid #cbd5e1;
-        }
+.top-action-btn.btn-orange:hover {
+    opacity: 0.95;
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.35);
+}
 
-        .poster-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+/* Filter Box */
+.filter-box {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 8px 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+}
 
-        /* Card Custom - Mở rộng không gian padding */
-        .showtime-card {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s ease;
-            overflow: hidden;
-            padding: 20px 24px;
-        }
+.filter-box:hover,
+.filter-box:focus-within {
+    border-color: var(--neon-purple);
+    box-shadow: 0 4px 18px rgba(168, 85, 247, 0.18);
+    transform: translateY(-1px);
+}
 
-        .showtime-card:hover {
-            border-color: var(--neon-purple);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.08);
-            transform: translateY(-2px);
-        }
+.filter-box i { color: var(--neon-purple); font-size: 1rem; }
 
-        /* Modal Gradient Header */
-        .modal-header-gradient {
-            background: var(--purple-radiant);
-            color: white !important;
-            border-radius: 20px 20px 0 0;
-        }
+.filter-select {
+    border: none !important;
+    background-color: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    padding: 4px 28px 4px 4px;
+    font-size: 0.9rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a855f7' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 4px center !important;
+    min-width: 180px;
+}
 
-        .modal-header-gradient .modal-title,
-        .modal-header-gradient .btn-close {
-            color: white !important;
-        }
+/* Showtime Card & Poster */
+.poster-container {
+    width: 95px;
+    height: 135px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
 
-        .modal-header-gradient .btn-close {
-            filter: invert(1) grayscale(1) brightness(2);
-        }
+.poster-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
-        /* Khung thiết lập giá vé nổi bật */
-        .price-config-box {
-            background: linear-gradient(145deg, #ffffff, #f1f5f9);
-            border: 2px solid #a855f7;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.15);
-        }
+.showtime-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.25s ease;
+    overflow: hidden;
+    padding: 20px 24px;
+}
 
-        /* Grid Checkbox chọn suất chiếu */
-        .slot-checkbox-card {
-            display: none;
-        }
+.showtime-card:hover {
+    border-color: var(--neon-purple);
+    box-shadow: 0 8px 25px rgba(168, 85, 247, 0.12);
+    transform: translateY(-2px);
+}
 
-        .slot-checkbox-label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 16px;
-            background: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            color: #475569;
-        }
+.showtime-card.hidden-card {
+    opacity: 0.55;
+    background: #f8fafc;
+    border-style: dashed;
+}
 
-        .slot-checkbox-card:checked + .slot-checkbox-label {
-            border-color: #a855f7;
-            background-color: #f3e8ff;
-            color: #6b21a8;
-            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15);
-        }
+/* Nút ẩn/hiện suất chiếu */
+.btn-hide {
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    color: #64748b;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 6px 14px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
 
-        .dynamic-slot-row {
-            background: #f8fafc;
-            border: 1px dashed #cbd5e1;
-            border-radius: 12px;
-            padding: 15px;
-            margin-top: 12px;
-        }
+.btn-hide:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+.btn-hide.is-hidden {
+    background: #ecfdf5;
+    border-color: #34d399;
+    color: #059669;
+}
+
+.btn-hide.is-hidden:hover {
+    background: #d1fae5;
+    border-color: #10b981;
+    color: #047857;
+}
+
+/* Modals Custom */
+.modal-header-gradient {
+    background: var(--purple-radiant);
+    color: white !important;
+    border-radius: 20px 20px 0 0;
+}
+
+.modal-header-gradient .modal-title,
+.modal-header-gradient .btn-close { color: white !important; }
+
+.modal-header-gradient .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+}
+
+.modal-header-orange {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: white !important;
+    border-radius: 20px 20px 0 0;
+}
+
+.modal-header-orange .modal-title,
+.modal-header-orange .btn-close { color: white !important; }
+
+.modal-header-orange .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+}
+
+/* Dynamic Slots */
+.dynamic-slot-row {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 10px;
+    transition: all 0.2s ease;
+}
+
+.dynamic-slot-row:hover {
+    border-color: var(--neon-purple);
+    background: #faf5ff;
+}
+
+/* Combo Styling */
+.combo-item {
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.combo-item:hover {
+    border-color: #f97316;
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.12);
+}
+
+.auto-price-box {
+    background: linear-gradient(135deg, #fff7ed, #ffedd5);
+    border: 1.5px solid #f97316;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #c2410c;
+}
+/* Thẻ Checkbox tùy chỉnh (Dành cho Combo & Nước) */
+.selectable-card {
+    background-color: #fffcf8;
+    border: 1.5px solid #fed7aa;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+}
+
+.selectable-card:hover {
+    border-color: #f97316;
+    background-color: #fff7ed;
+    box-shadow: 0 3px 10px rgba(249, 115, 22, 0.12);
+}
+
+.selectable-card:has(.form-check-input:checked) {
+    border-color: #ea580c;
+    background-color: #fff7ed;
+    box-shadow: 0 0 0 1px #ea580c;
+}
+
+.selectable-card .form-check-input {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+.selectable-card .card-price {
+    font-weight: 700;
+    color: #f59e0b;
+    font-size: 1rem;
+}
+
+/* Khung danh sách có cuộn */
+.scrollable-card-list {
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Custom Scrollbar cho mượt */
+.scrollable-card-list::-webkit-scrollbar {
+    width: 6px;
+}
+.scrollable-card-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Styling cho Card Suất Chiếu mẫu mới */
+.showtime-card-v2 {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 20px 24px;
+    transition: all 0.25s ease;
+}
+
+.showtime-card-v2:hover {
+    border-color: #a855f7;
+    box-shadow: 0 8px 24px rgba(168, 85, 247, 0.12);
+}
+
+.showtime-card-v2.hidden-card {
+    opacity: 0.55;
+    background: #f8fafc;
+    border-style: dashed;
+}
+
+.time-box-large {
+    background: #1d4ed8;
+    color: white;
+    font-size: 1.35rem;
+    font-weight: 800;
+    border-radius: 10px;
+    padding: 8px 16px;
+    display: inline-block;
+    text-align: center;
+}
+
+.badge-combo-tag {
+    background-color: #f59e0b;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 5px 12px;
+    border-radius: 8px;
+}
+
+.ticket-status-text {
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
