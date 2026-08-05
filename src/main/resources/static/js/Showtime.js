@@ -11,50 +11,85 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Khởi tạo ứng dụng
 async function initApp() {
+    const dateInput = document.getElementById('dateFilter');
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+    }
     await Promise.all([
         fetchMovies(),
         fetchRooms(),
         fetchCombos(),
         fetchProducts()
     ]);
+
+
     await fetchShowtimes();
 }
 
 
- function showCustomModal({ title, message, type = 'info', confirmText = 'Đồng ý', cancelText = 'Hủy', onConfirm = null }) {
+ function showCustomModal({
+     title = 'Thông báo',
+     message = '',
+     type = 'info',
+     confirmText = 'Đồng ý',
+     cancelText = 'Hủy bỏ',
+     onConfirm = null
+ }) {
+     // Xóa Modal cũ nếu đang tồn tại để tránh đè DOM
      const existingModal = document.getElementById('customSystemModal');
-     if (existingModal) existingModal.remove();
+     if (existingModal) {
+         const activeBsModal = bootstrap.Modal.getInstance(existingModal);
+         if (activeBsModal) activeBsModal.dispose();
+         existingModal.remove();
+     }
 
      const isConfirm = typeof onConfirm === 'function';
 
-     // Đặt Icon theo loại thông báo
+     // Cấu hình Icon và Màu sắc theo 'type'
      let iconHeader = 'fa-circle-info';
-     if (type === 'danger') iconHeader = 'fa-triangle-exclamation';
-     else if (type === 'success') iconHeader = 'fa-circle-check';
-     else if (type === 'orange') iconHeader = 'fa-box-open';
+     let headerBgClass = 'bg-primary';
+     let confirmBtnClass = 'btn-primary';
+
+     if (type === 'danger') {
+         iconHeader = 'fa-triangle-exclamation';
+         headerBgClass = 'bg-danger';
+         confirmBtnClass = 'btn-danger';
+     } else if (type === 'success') {
+         iconHeader = 'fa-circle-check';
+         headerBgClass = 'bg-success';
+         confirmBtnClass = 'btn-success';
+     } else if (type === 'warning' || type === 'orange') {
+         iconHeader = 'fa-triangle-exclamation';
+         headerBgClass = 'bg-warning text-dark';
+         confirmBtnClass = 'btn-warning text-dark';
+     }
 
      const modalHtml = `
          <div class="modal fade" id="customSystemModal" tabindex="-1" style="z-index: 1090;">
              <div class="modal-dialog modal-dialog-centered modal-sm">
                  <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden bg-white">
 
-                     <!-- Header Xanh Dương -->
-                     <div class="modal-header bg-primary text-white px-3 py-2.5 border-0">
-                         <h6 class="modal-title fw-bold d-flex align-items-center gap-2 text-white mb-0">
+                     <!-- Header -->
+                     <div class="modal-header ${headerBgClass} px-3 py-2.5 border-0">
+                         <h6 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0">
                              <i class="fa-solid ${iconHeader}"></i> ${title}
                          </h6>
-                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                         <button type="button" class="btn-close ${type === 'warning' ? '' : 'btn-close-white'}" data-bs-dismiss="modal" aria-label="Close"></button>
                      </div>
 
-                     <!-- Body Nền Trắng - Chữ Xanh Dương -->
+                     <!-- Body -->
                      <div class="modal-body p-4 text-center bg-white">
-                         <p class="mb-0 text-primary fw-bold fs-6">${message}</p>
+                         <div class="mb-0 text-secondary fw-semibold fs-6">${message}</div>
                      </div>
 
-                     <!-- Footer Nền Trắng -->
+                     <!-- Footer -->
                      <div class="modal-footer bg-white p-2 border-0 justify-content-center gap-2">
                          ${isConfirm ? `<button type="button" class="btn btn-sm btn-outline-secondary px-3 rounded-3 fw-semibold" data-bs-dismiss="modal">${cancelText}</button>` : ''}
-                         <button type="button" class="btn btn-sm btn-primary text-white px-4 rounded-3 fw-bold" id="btnCustomModalConfirm">${confirmText}</button>
+                         <button type="button" class="btn btn-sm ${confirmBtnClass} px-4 rounded-3 fw-bold" id="btnCustomModalConfirm">${confirmText}</button>
                      </div>
 
                  </div>
@@ -67,10 +102,15 @@ async function initApp() {
 
      document.getElementById('btnCustomModalConfirm').onclick = () => {
          bsModal.hide();
-         if (isConfirm) onConfirm();
+         if (isConfirm) {
+             // Đợi hiệu ứng đóng modal hoàn tất rồi mới thực thi callback để tránh đè modal mới
+             modalEl.addEventListener('hidden.bs.modal', () => {
+                 onConfirm();
+             }, { once: true });
+         }
      };
 
-     // Tự động xóa khỏi DOM sau khi đóng để tránh xung đột focus với Modal khác
+     // Tự dọn dẹp DOM khi ẩn
      modalEl.addEventListener('hidden.bs.modal', () => {
          modalEl.remove();
      });
@@ -82,8 +122,8 @@ function customAlert(message, title = "Thông báo", type = "info") {
     showCustomModal({ title, message, type });
 }
 
-function customConfirm(message, onConfirm, title = "Xác nhận hành động") {
-    showCustomModal({ title, message, type: 'danger', confirmText: 'Xác nhận', onConfirm });
+function customConfirm(message, onConfirm, title = "Xác nhận thao tác", type = "danger", confirmText = "Xác nhận") {
+    showCustomModal({ title, message, type, confirmText, onConfirm });
 }
 
 // Gọi API lấy danh sách phim
@@ -403,6 +443,7 @@ function populateModalForEdit(id) {
 
 
 
+
 // Lưu / Cập nhật Suất chiếu
 async function saveUnifiedShowtime() {
     const editingId = document.getElementById('editing-showtime-id')?.value;
@@ -414,21 +455,23 @@ async function saveUnifiedShowtime() {
     const regularPrice = parseFloat(document.getElementById('ticket-regular-price')?.value);
     const vipPercent = parseFloat(document.getElementById('ticket-vip-percent')?.value);
 
-    // 1. LẤY NGÀY & GIỜ HIỆN TẠI (Chuẩn Timezone địa phương)
+    // 1. LẤY NGÀY & GIỜ HIỆN TẠI VÀ MỐC GIỜ GIỚI HẠN (+1 GIỜ)
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`; // Định dạng YYYY-MM-DD
-    const currentHHMM = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
 
-    // 2. VALIDATION NGÀY CHIẾU
+    // Mốc thời gian giới hạn: Hiện tại + 1 tiếng
+    const limitTime = new Date(now.getTime() + 60 * 60 * 1000);
+    const limitHHMM = String(limitTime.getHours()).padStart(2, '0') + ':' + String(limitTime.getMinutes()).padStart(2, '0');
+
+    // 2. VALIDATION DỮ LIỆU ĐẦU VÀO
     if (!movieId) return customAlert("Vui lòng chọn Phim áp dụng!", "Thiếu thông tin", "orange");
 
     if (isRepeat && !editingId) {
         if (!startDate || !endDate) return customAlert("Vui lòng chọn ngày bắt đầu và ngày kết thúc!", "Thiếu thông tin", "orange");
 
-        // Ngày bắt đầu lặp phải từ Hôm nay trở đi
         if (startDate < todayStr) {
             return customAlert("Ngày bắt đầu lặp lịch chiếu phải từ <strong>Hôm nay</strong> trở đi!", "Lỗi ngày chiếu", "orange");
         }
@@ -438,7 +481,6 @@ async function saveUnifiedShowtime() {
     } else {
         if (!singleDate) return customAlert("Vui lòng chọn ngày áp dụng!", "Thiếu thông tin", "orange");
 
-        // Không chọn ngày trong quá khứ
         if (singleDate < todayStr) {
             return customAlert("Không thể thiết lập suất chiếu cho ngày trong quá khứ!", "Lỗi ngày chiếu", "orange");
         }
@@ -469,14 +511,13 @@ async function saveUnifiedShowtime() {
     if (startTimes.length === 0) return customAlert("Vui lòng chọn ít nhất 1 khung giờ chiếu!", "Thiếu thông tin", "orange");
     if (!selectedRoomId) return customAlert("Vui lòng chọn phòng chiếu!", "Thiếu thông tin", "orange");
 
-    // 3. XỬ LÝ BẮT LỖI GIỜ CHIẾU ĐÃ QUA
-
+    // 3. BẮT LỖI GIỜ CHIẾU ĐƠN LẺ KHÔNG ĐỦ +1 GIỜ SO VỚI HIỆN TẠI (Khi chiếu trong hôm nay)
     if (!isRepeat && singleDate === todayStr) {
         for (let timeStr of startTimes) {
             const shortTime = timeStr.substring(0, 5);
-            if (shortTime <= currentHHMM) {
+            if (shortTime <= limitHHMM) {
                 return customAlert(
-                    `Khung giờ [<strong>${shortTime}</strong>] đã trôi qua so với giờ hiện tại (<strong>${currentHHMM}</strong>)! Vui lòng chọn giờ chiếu trong tương lai cho suất chiếu đơn lẻ.`,
+                    `Giờ chiếu [<strong>${shortTime}</strong>] không hợp lệ! Thời gian chiếu hôm nay phải lớn hơn giờ hiện tại ít nhất 1 tiếng (sau <strong>${limitHHMM}</strong>).`,
                     "Thời gian không hợp lệ",
                     "orange"
                 );
@@ -484,7 +525,7 @@ async function saveUnifiedShowtime() {
         }
     }
 
-    // 4. KIỂM TRA TRÙNG LỊCH CHIẾU VỚI CÁC SUẤT ĐÃ CÓ
+    // 4. KIỂM TRA TRÙNG LỊCH CHIẾU VỚI CÁC SUẤT ĐÃ CÓ (CLIENT-SIDE)
     const parsedMovieId = !isNaN(movieId) ? Number(movieId) : movieId;
     const selectedMovie = systemMovies.find(m => String(m.id) === String(parsedMovieId));
     const duration = selectedMovie ? parseInt(selectedMovie.thoiLuong || selectedMovie.duration || 120) : 120;
@@ -532,7 +573,7 @@ async function saveUnifiedShowtime() {
         }
     }
 
-    // 5. GỬI PAYLOAD VỀ BACKEND
+    // 5. CHUẨN BỊ PAYLOAD GỬI VỀ SERVER
     const selectedComboIds = Array.from(document.querySelectorAll('.combo-checkbox:checked')).map(cb => {
         return !isNaN(cb.value) ? Number(cb.value) : cb.value;
     });
@@ -554,6 +595,7 @@ async function saveUnifiedShowtime() {
             roomId: String(selectedRoomId),
             startTimes: startTimes,
             isRepeat: Boolean(isRepeat),
+            isConfirmSkipInvalid: false, // Mặc định là false
             singleDate: isRepeat ? (startDate || singleDate) : singleDate,
             startDate: isRepeat ? startDate : singleDate,
             endDate: isRepeat ? endDate : singleDate,
@@ -566,44 +608,65 @@ async function saveUnifiedShowtime() {
     const apiUrl = editingId ? `/api/showtimes/${editingId}` : '/api/showtimes';
     const apiMethod = editingId ? 'PUT' : 'POST';
 
-    try {
-        const response = await fetch(apiUrl, {
-            method: apiMethod,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    // 6. THỰC THI GỬI API VÀ XỬ LÝ PHẢN HỒI
+    async function executeSubmit(requestPayload) {
+        try {
+            const response = await fetch(apiUrl, {
+                method: apiMethod,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestPayload)
+            });
 
-        let result = {};
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            result = await response.json();
+            let result = {};
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                result = await response.json();
+            }
+
+            if (response.ok && (result.success || result.id)) {
+                customAlert(editingId ? "Cập nhật suất chiếu thành công!" : "Tạo mới suất chiếu thành công!", "Thành công", "success");
+
+                const modalEl = document.getElementById('unifiedShowtimeModal');
+                if (modalEl) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+                }
+
+                if (editingId) {
+                    updateShowtimeCard(result.data || result);
+                } else {
+                    fetchShowtimes();
+                }
+            } else {
+                const serverMsg = result.message || "Dữ liệu chưa khớp với yêu cầu của máy chủ.";
+
+
+                // Gọi Confirm tạo suất chiếu khi bị lỗi thời gian trong chuỗi lặp
+                if (serverMsg.includes("REQUIRE_CONFIRM")) {
+                    const cleanMsg = serverMsg.replace(" | REQUIRE_CONFIRM", "");
+
+                    customConfirm(
+                        cleanMsg,
+                        async () => {
+                            requestPayload.isConfirmSkipInvalid = true;
+                            await executeSubmit(requestPayload);
+                        },
+                        "Xác nhận tạo suất chiếu",
+                        "warning",
+                        "Đồng ý tạo"
+                    );
+                } else {
+                    customAlert(`Lỗi máy chủ (${response.status}): ${serverMsg}`, "Thất bại", "danger");
+                }
+            }
+        } catch (error) {
+            console.error("Lỗi kết nối API:", error);
+            customAlert("Đã xảy ra lỗi kết nối với máy chủ API!", "Lỗi mạng", "danger");
         }
-
-       if (response.ok && (result.success || result.id)) {
-           customAlert(editingId ? "Cập nhật suất chiếu thành công!" : "Tạo mới suất chiếu thành công!", "Thành công", "success");
-
-           const modalEl = document.getElementById('unifiedShowtimeModal');
-           if (modalEl) {
-               const modalInstance = bootstrap.Modal.getInstance(modalEl);
-               if (modalInstance) modalInstance.hide();
-           }
-
-           if (editingId) {
-               // NẾU LÀ SỬA: Cập nhật trực tiếp card tại chỗ (giữ nguyên vị trí tuyệt đối)
-               updateShowtimeCard(result.data || result);
-           } else {
-               // NẾU LÀ THÊM MỚI: Tải lại toàn bộ danh sách
-               fetchShowtimes();
-           }
-       }
-        else {
-            const serverMsg = result.message || "Dữ liệu chưa khớp với yêu cầu của máy chủ.";
-            customAlert(`Lỗi máy chủ (${response.status}): ${serverMsg}`, "Thất bại", "danger");
-        }
-    } catch (error) {
-        console.error("Lỗi kết nối API:", error);
-        customAlert("Đã xảy ra lỗi kết nối với máy chủ API!", "Lỗi mạng", "danger");
     }
+
+    // Thực thi gọi hàm gửi API
+    await executeSubmit(payload);
 }
 
 function formatTimeToAMPM(timeStr) {
@@ -616,41 +679,98 @@ function formatTimeToAMPM(timeStr) {
 
     if (isNaN(hours)) return timeStr;
 
-    // Xác định AM hay PM
+
     const ampm = hours >= 12 ? 'PM' : 'AM';
 
-    // Quy đổi giờ 24h sang 12h (0h thành 12h, 13h thành 1h,...)
+
     hours = hours % 12;
     hours = hours ? hours : 12;
-
-    // Format giờ 2 chữ số (VD: 09:30 AM thay vì 9:30 AM)
     const formattedHours = hours < 10 ? '0' + hours : hours;
 
     return `${formattedHours}:${minutes} ${ampm}`;
 }
+// Hàm kiểm tra suất chiếu đã kết thúc hay chưa
+function isShowtimeCompleted(slot) {
+    const now = new Date();
+    const dateStr = slot.showDate || slot.date; // YYYY-MM-DD
+    if (!dateStr) return false;
 
-// Render Card Suất Chiếu chuẩn 100% giao diện
+    // Tính giờ kết thúc: Ưu tiên slot.endTime, nếu không có thì cộng thời lượng phim vào slot.startTime
+    let endTimeStr = slot.endTime;
+    if (!endTimeStr) {
+        const startTimeStr = slot.startTime || slot.time || "00:00";
+        const [h, m] = startTimeStr.split(':').map(Number);
+        const duration = (typeof slot.movie === 'object' && slot.movie?.duration) || slot.duration || 120;
 
+        const totalMinutes = h * 60 + m + parseInt(duration);
+        const endH = Math.floor(totalMinutes / 60) % 24;
+        const endM = totalMinutes % 60;
+        endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`;
+    }
+
+    // Tạo object Date thời điểm kết thúc suất chiếu
+    const showEndDateTime = new Date(`${dateStr}T${endTimeStr.substring(0, 5)}:00`);
+    return showEndDateTime < now;
+}
+
+// Render Card Suất Chiếu chuẩn
 function renderShowtimeCards() {
     const container = document.getElementById('cards-display-container');
     const filterValue = document.getElementById('statusFilter')?.value || 'ALL';
+    const dateFilterValue = document.getElementById('dateFilter')?.value; // Lấy ngày chiếu được chọn
+
     if (!container) return;
 
     container.innerHTML = "";
 
-    let filteredList = showtimesDatabase;
-    if (filterValue === 'ASSIGNED') {
-        filteredList = showtimesDatabase.filter(s => s.isAssigned === true);
-    } else if (filterValue === 'HIDDEN') {
-        filteredList = showtimesDatabase.filter(s => s.isHidden === true);
-    }
+    // 1. LỌC DANH SÁCH THEO NGÀY & TRẠNG THÁI
+    const filteredList = showtimesDatabase.filter(slot => {
+        const slotDate = slot.showDate || slot.date;
 
+        // Lọc theo Ngày chọn (Nếu ô ngày có giá trị)
+        if (dateFilterValue && slotDate !== dateFilterValue) {
+            return false;
+        }
+
+        // Lọc theo Trạng thái
+        const isCompleted = isShowtimeCompleted(slot);
+        const isHidden = Boolean(slot.isHidden) || slot.status === 'HIDDEN';
+
+        if (filterValue === 'ASSIGNED') {
+            return !isCompleted && !isHidden;
+        } else if (filterValue === 'HIDDEN') {
+            return isHidden;
+        } else if (filterValue === 'COMPLETED') {
+            return isCompleted && !isHidden;
+        }
+
+        // Mặc định 'ALL': Lấy tất cả theo ngày đã chọn
+        return true;
+    });
+
+    // 2. SẮP XẾP SUẤT CHIẾU THEO GIỜ CHIẾU (Tăng dần từ sáng -> tối)
+    filteredList.sort((a, b) => {
+        const timeA = a.startTime || a.time || "00:00";
+        const timeB = b.startTime || b.time || "00:00";
+        return timeA.localeCompare(timeB);
+    });
+
+    // 3. XỬ LÝ KHÔNG CÓ DỮ LIỆU
     if (!filteredList || filteredList.length === 0) {
-        container.innerHTML = `<div class="col-12 p-5 text-center text-muted bg-white rounded-4 border">Không tìm thấy suất chiếu nào phù hợp.</div>`;
+        const dateFormatted = dateFilterValue ? formatDate(dateFilterValue) : '';
+        container.innerHTML = `
+            <div class="col-12 p-5 text-center text-muted bg-white rounded-4 border shadow-sm">
+                <i class="fa-regular fa-calendar-xmark fs-1 mb-2 text-secondary"></i>
+                <p class="mb-0 fw-semibold">Không tìm thấy suất chiếu nào phù hợp${dateFormatted ? ' cho ngày ' + dateFormatted : ''}.</p>
+            </div>`;
         return;
     }
 
+    // 4. RENDER DANH SÁCH CARD SUẤT CHIẾU
     filteredList.forEach(slot => {
+        const isCompleted = isShowtimeCompleted(slot);
+        const isHidden = Boolean(slot.isHidden) || slot.status === 'HIDDEN';
+
         // Tên phim, Thời lượng & Ảnh Poster
         let movieName = "Phim chưa đặt tên";
         let durationDisplay = slot.duration || 0;
@@ -659,13 +779,12 @@ function renderShowtimeCards() {
         if (typeof slot.movie === 'object' && slot.movie !== null) {
             movieName = slot.movie.tenPhim || slot.movie.title || slot.movie.name || movieName;
             durationDisplay = slot.movie.thoiLuong || slot.movie.duration || durationDisplay;
-            // Tự động tìm đường dẫn ảnh Poster trong object movie
             posterUrl = posterUrl || slot.movie.hinhAnh || slot.movie.posterUrl || slot.movie.poster || slot.movie.image || slot.movie.imageUrl || '';
         } else if (typeof slot.movieTitle === 'string') {
             movieName = slot.movieTitle;
         }
 
-        // Tên phòng chiếu
+        // Tên phòng chiếu & Tổng số ghế
         let roomName = "Phòng chiếu";
         let totalSeats = slot.totalSeats || slot.screeningRoom?.tongSoGhe || slot.room?.tongSoGhe || 50;
 
@@ -678,7 +797,7 @@ function renderShowtimeCards() {
 
         const ticketsSold = slot.ticketsSold || slot.soVeDaBan || 0;
 
-        // Render Combo Badges kèm theo
+        // Render Combo Badges
         let comboBadgesHtml = "";
         if (slot.combos && Array.isArray(slot.combos)) {
             slot.combos.forEach(c => {
@@ -690,24 +809,32 @@ function renderShowtimeCards() {
             });
         }
 
-        // Giá vé
+        // Giá vé & Thời gian
         const regPrice = slot.regularPrice ? slot.regularPrice.toLocaleString('vi-VN') : '0';
         const vipPercent = slot.vipPercent || 20;
 
-        // 🔥 CHỈ SỬA ĐOẠN NÀY: Định dạng giờ thêm đuôi AM / PM
         let rawTime = slot.startTime || slot.time || "00:00";
         const timeDisplay = formatTimeToAMPM(rawTime);
         const dateDisplay = formatDate(slot.showDate || slot.date || "2026-07-25");
 
-        const isHidden = Boolean(slot.isHidden);
-        const cardHiddenClass = isHidden ? "hidden-card" : "";
+        // Badge Trạng thái & Style Card
+        let statusBadgeHtml = `<span class="badge bg-success px-2.5 py-1.5 fs-7"><i class="fa-solid fa-circle-check me-1"></i>Đã thiết lập vé</span>`;
+        let cardExtraClass = "";
+
+        if (isHidden) {
+            statusBadgeHtml = `<span class="badge bg-secondary px-2.5 py-1.5 fs-7"><i class="fa-solid fa-eye-slash me-1"></i>Đã ẩn</span>`;
+            cardExtraClass = "hidden-card";
+        } else if (isCompleted) {
+            statusBadgeHtml = `<span class="badge bg-dark px-2.5 py-1.5 fs-7"><i class="fa-solid fa-clock-rotate-left me-1"></i>Đã chiếu xong</span>`;
+            cardExtraClass = "opacity-75 bg-light";
+        }
 
         const cardHTML = `
             <div class="col-12 mb-3" id="showtime-card-${slot.id}">
-                <div class="showtime-card-v2 ${cardHiddenClass} p-3">
+                <div class="showtime-card-v2 ${cardExtraClass} p-3">
                     <div class="row align-items-center g-3">
 
-                        <!-- 1. KHUNG POSTER ẢNH PHIM -->
+                        <!-- KHUNG POSTER -->
                         <div class="col-auto">
                             <div class="poster-container shadow-sm rounded-3 overflow-hidden bg-light d-flex align-items-center justify-content-center" style="width: 80px; height: 110px;">
                                 ${posterUrl ?
@@ -717,24 +844,24 @@ function renderShowtimeCards() {
                             </div>
                         </div>
 
-                        <!-- 2. CỘT THỜI GIAN (Hiển thị giờ AM / PM) -->
+                        <!-- CỘT THỜI GIAN -->
                         <div class="col-md-2 text-center text-md-start border-end pe-md-3">
-                            <span class="badge bg-primary fs-6 px-3 py-1.5 rounded-3 mb-2 d-inline-block shadow-sm">${timeDisplay}</span>
+                            <span class="badge ${isCompleted ? 'bg-secondary' : 'bg-primary'} fs-6 px-3 py-1.5 rounded-3 mb-2 d-inline-block shadow-sm">${timeDisplay}</span>
                             <div class="small text-muted fw-semibold mb-1"><i class="fa-regular fa-calendar me-1"></i>${dateDisplay}</div>
                             <div class="small text-muted"><i class="fa-regular fa-clock me-1"></i>${durationDisplay} phút</div>
                         </div>
 
-                        <!-- 3. CỘT THÔNG TIN CHÍNH -->
+                        <!-- CỘT THÔNG TIN CHÍNH -->
                         <div class="col-md-5 col-lg-6 ps-md-3">
                             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                <span class="badge bg-success px-2.5 py-1.5 fs-7"><i class="fa-solid fa-circle-check me-1"></i>Đã thiết lập vé</span>
+                                ${statusBadgeHtml}
                                 ${comboBadgesHtml}
                             </div>
 
                             <h4 class="fw-bold text-dark mb-1.5 text-truncate">${movieName}</h4>
 
                             <div class="text-secondary fw-semibold small mb-1">
-                                <i class="fa-solid fa-door-open text-muted me-1"></i>Cấu hình tại: <strong>${roomName}</strong>
+                                <i class="fa-solid fa-door-open text-muted me-1"></i>Vị trí phòng: <strong>${roomName}</strong>
                             </div>
 
                             <div class="ticket-status-text mb-1">
@@ -746,12 +873,12 @@ function renderShowtimeCards() {
                             </div>
                         </div>
 
-                        <!-- 4. CỘT NÚT THAO TÁC -->
+                        <!-- CỘT NÚT THAO TÁC -->
                         <div class="col-md-3 col-lg-3 text-md-end d-flex gap-2 justify-content-md-end align-items-center ms-auto">
                             <button class="btn btn-light text-secondary border btn-sm px-3 fw-semibold" onclick="toggleHideShowtime('${slot.id}')">
                                 <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'} me-1"></i>${isHidden ? 'Hiện' : 'Ẩn'}
                             </button>
-                            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#unifiedShowtimeModal" onclick="onOpenShowtimeModal('${slot.id}')">
+                            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" ${isCompleted ? 'disabled' : ''} data-bs-toggle="modal" data-bs-target="#unifiedShowtimeModal" onclick="onOpenShowtimeModal('${slot.id}')">
                                 <i class="fa-solid fa-pen-to-square me-1"></i>Sửa
                             </button>
                             <button class="btn btn-outline-danger btn-sm px-3 fw-semibold" onclick="deleteShowtime('${slot.id}')">
@@ -793,24 +920,35 @@ async function toggleHideShowtime(id) {
 
 // Xóa suất chiếu
 function deleteShowtime(id) {
-    customConfirm(`Bạn có chắc chắn muốn xóa suất chiếu mã [${id}] không?`, async () => {
-        try {
-            const response = await fetch(`/api/showtimes/${id}`, { method: 'DELETE' });
-            const result = await response.json();
+    customConfirm(
+        `Bạn có chắc chắn muốn xóa suất chiếu không?`,
+        async () => {
+            try {
+                const response = await fetch(`/api/showtimes/${id}`, { method: 'DELETE' });
+                let result = {};
 
-            if (response.ok && result.success) {
-                customAlert('Xóa suất chiếu thành công!', 'Thành công', 'success');
-                fetchShowtimes();
-            } else {
-                customAlert(result.message || 'Không thể xóa suất chiếu.', 'Lỗi', 'danger');
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                }
+
+                if (response.ok) {
+                    customAlert('Xóa suất chiếu thành công!', 'Thành công', 'success');
+                    fetchShowtimes();
+                } else {
+                    customAlert(result.message || 'Không thể xóa suất chiếu.', 'Lỗi', 'danger');
+                }
+            } catch (error) {
+                console.error("Lỗi xóa suất chiếu:", error);
+                customAlert("Đã xảy ra lỗi kết nối với máy chủ!", "Lỗi", "danger");
             }
-        } catch (error) {
-            console.error("Lỗi xóa suất chiếu:", error);
-            customAlert("Đã xảy ra lỗi kết nối với máy chủ!", "Lỗi", "danger");
-        }
-    });
+        },
+        "Xác nhận xóa",
+        "danger",
+        "Xóa ngay"
+    );
 }
-// Hàm cập nhật trực tiếp 1 Card Suất chiếu trên giao diện (Không render lại toàn bộ danh sách)
+// Hàm cập nhật trực tiếp 1 Card Suất chiếu trên giao diện
 function updateShowtimeCard(slot) {
     const cardElement = document.getElementById(`showtime-card-${slot.id}`);
     if (!cardElement) return;
@@ -861,7 +999,7 @@ function updateShowtimeCard(slot) {
     if (titleEl) titleEl.textContent = movieName;
 
     const roomEl = cardElement.querySelector('.fa-door-open')?.parentElement;
-    if (roomEl) roomEl.innerHTML = `<i class="fa-solid fa-door-open text-muted me-1"></i>Cấu hình tại: <strong>${roomName}</strong>`;
+    if (roomEl) roomEl.innerHTML = `<i class="fa-solid fa-door-open text-muted me-1"></i>Vị trí phòng chiếu: <strong>${roomName}</strong>`;
 
     const priceEl = cardElement.querySelector('.small.text-muted:last-child');
     if (priceEl) priceEl.innerHTML = `Giá thường: <strong class="text-dark">${regPrice}đ</strong> · VIP: +${vipPercent}%`;
@@ -1023,7 +1161,7 @@ async function addNewCombo() {
     }
 }
 
-// Render Danh sách Combo đã cấu hình (Sửa lỗi hiển thị 0đ)
+// Render Danh sách Combo đã cấu hình
 function renderComboList() {
     const container = document.getElementById('combo-list-container');
     const badge = document.getElementById('combo-count-badge');

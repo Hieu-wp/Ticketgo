@@ -1,10 +1,12 @@
 package com.example.ticketgo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "movies") // Tên bảng trên Supabase của bạn
+@Table(name = "movies", schema = "public")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Film {
 
     @Id
@@ -20,14 +22,14 @@ public class Film {
     @Column(name = "duration", nullable = false)
     private Integer duration;
 
-    @Column(name = "rating", nullable = false, precision = 3, scale = 1)
+    @Column(name = "rating", precision = 3, scale = 1)
     private BigDecimal rating;
 
     @Column(name = "age_rating", nullable = false)
     private String ageRating;
 
     // release_date là kiểu text trong DB, không phải date
-    @Column(name = "release_date", nullable = false)
+    @Column(name = "release_date")
     private String releaseDate;
 
     @Column(name = "synopsis", nullable = false, columnDefinition = "TEXT")
@@ -45,9 +47,13 @@ public class Film {
     @Column(name = "director")
     private String director = "N/A";
 
-    // "cast" là từ khoá SQL, cần bọc trong ngoặc kép khi map
+
     @Column(name = "\"cast\"")
     private String cast = "N/A";
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     // --- CONSTRUCTOR ---
     public Film() {
@@ -156,5 +162,13 @@ public class Film {
 
     public void setCast(String cast) {
         this.cast = cast;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
     }
 }

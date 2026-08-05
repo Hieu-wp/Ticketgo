@@ -21,8 +21,9 @@
         <hr class="text-secondary mx-3 my-2">
         <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
         <a href="/" class="nav-link active"><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
-        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phong chieu</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
         <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
@@ -40,25 +41,30 @@
             </button>
         </div>
 
+        <!-- DANH SÁCH PHIM ĐỘNG -->
         <div class="row row-cols-1 row-cols-md-3 g-4">
             <div class="col" th:each="film : ${films}">
                 <div class="movie-card" th:id="'film-card-' + ${film.id}" style="border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; background: #fff; height: 100%; display: flex; flex-direction: column;">
                     <div class="poster-wrapper d-flex align-items-center justify-content-center" style="height: 300px; width: 100%; background: #f8f9fa; overflow: hidden;">
-                        <!-- Thêm xử lý tự động thay link mặc định nếu URL rỗng hoặc bị lỗi -->
                         <img th:src="${film.posterUrl != null && !#strings.isEmpty(film.posterUrl) ? film.posterUrl : 'https://placehold.co/300x450/png?text=No+Poster'}"
                              onerror="this.onerror=null; this.src='https://placehold.co/300x450/png?text=No+Poster';"
                              class="movie-poster" alt="poster" style="width: auto; height: 100%; max-width: 100%; object-fit: contain;">
                     </div>
                     <div class="p-3 d-flex flex-column flex-grow-1 justify-content-between">
                         <div>
+                            <!-- 1. Tiêu đề (Đã có class movie-title) -->
                             <h6 class="fw-bold mb-2 text-truncate text-dark movie-title" th:text="${film.title}"></h6>
+
+                            <!-- 2. Thêm class movie-category vào span danh mục -->
                             <p class="text-muted small mb-1">
-                                <span>Thể loại: </span>
-                                <span th:text="${film.genre}"></span>
+                                <span>Danh mục: </span>
+                                <span class="movie-category" th:text="${film.category != null ? film.category.name : film.genre}"></span>
                             </p>
+
+                            <!-- 3. Thêm class movie-duration vào span thời lượng -->
                             <p class="text-muted small mb-3">
                                 <span>Thời lượng: </span>
-                                <span class="fw-bold" style="color: var(--purple-primary)" th:text="${film.duration + ' phút'}"></span>
+                                <span class="fw-bold movie-duration" style="color: var(--purple-primary)" th:text="${film.duration + ' phút'}"></span>
                             </p>
                         </div>
                         <div class="d-flex gap-2 justify-content-end">
@@ -69,6 +75,7 @@
                                     th:data-id="${film.id}"
                                     th:data-title="${film.title}"
                                     th:data-genre="${film.genre}"
+                                    th:data-category-id="${film.category != null ? film.category.id : ''}"
                                     th:data-duration="${film.duration}"
                                     th:data-rating="${film.rating}"
                                     th:data-age-rating="${film.ageRating}"
@@ -86,13 +93,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-12 text-center py-5" th:if="${#lists.isEmpty(films)}">
-                <p class="text-muted">Chưa có bộ phim nào trong cơ sở dữ liệu.</p>
-            </div>
         </div>
     </div>
 
-    <!-- FORM THÊM PHIM MỚI  -->
+    <!-- FORM THÊM PHIM MỚI -->
     <div id="view-config" class="config-container" style="display: none;">
         <div class="mb-4">
             <button class="btn btn-link p-0 text-decoration-none mb-2" style="color: var(--purple-primary)" onclick="showView('list')">
@@ -101,7 +105,7 @@
             <h3 class="fw-bold text-dark">Cấu hình phim mới</h3>
         </div>
 
-        <form action="/films/add" method="post" enctype="multipart/form-data">
+        <form id="addFilmForm" action="/films/add" method="post" enctype="multipart/form-data">
             <div class="row g-4 add-movie-form">
                 <div class="col-md-7">
                     <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
@@ -112,25 +116,15 @@
                                 <input type="text" name="title" class="form-control" placeholder="Nhập tên phim" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Thể loại</label>
-                                <select name="genre" class="form-select" required>
-                                    <option value="" disabled selected>-- Chọn thể loại --</option>
-                                    <option value="Hành động">Hành động</option>
-                                    <option value="Tình cảm">Tình cảm</option>
-                                    <option value="Hài hước">Hài hước</option>
-                                    <option value="Kinh dị">Kinh dị</option>
-                                    <option value="Hoạt hình">Hoạt hình</option>
-                                    <option value="Viễn tưởng">Viễn tưởng</option>
-                                    <option value="Phiêu lưu">Phiêu lưu</option>
+                                <label class="form-label">Danh mục</label>
+                                <select id="add-category_id" name="category_id" class="form-select" required>
+                                    <option value=""> Chọn danh mục phim</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Độ tuổi</label>
-                                <select name="ageRating" class="form-select" required>
-                                    <option value="P">P - Mọi lứa tuổi</option>
-                                    <option value="T13">T13 - Trên 13 tuổi</option>
-                                    <option value="T16">T16 - Trên 16 tuổi</option>
-                                    <option value="T18">T18 - Trên 18 tuổi</option>
+                                <select id="add-ageRating" name="ageRating" class="form-select" required>
+                                    <option value="">Chọn độ tuổi</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -201,7 +195,7 @@
         </form>
     </div>
 
-    <!-- FORM CHỈNH SỬA  -->
+    <!-- FORM CHỈNH SỬA -->
     <form id="editFilmForm" action="/films/edit" method="post" enctype="multipart/form-data" class="card neon-card p-4 p-md-5 rounded-4 col-md-10" style="display: none;">
         <input type="hidden" id="edit-id" name="id">
 
@@ -224,7 +218,6 @@
                         <label for="imageUpload"><i class="bi bi-camera-fill"></i></label>
                     </div>
                     <div class="avatar-preview">
-                        <!-- Sửa link mặc định khi xem trước ảnh bị hỏng -->
                         <img id="imagePreview" src="https://placehold.co/300x450/png?text=No+Poster" onerror="this.onerror=null; this.src='https://placehold.co/300x450/png?text=No+Poster';" alt="Poster">
                     </div>
                 </div>
@@ -238,7 +231,6 @@
                         <label for="bannerUpload"><i class="bi bi-camera-fill"></i></label>
                     </div>
                     <div class="avatar-preview">
-                        <!-- Sửa link mặc định khi xem trước ảnh bị hỏng -->
                         <img id="bannerPreview" src="https://placehold.co/800x450/png?text=No+Banner" onerror="this.onerror=null; this.src='https://placehold.co/800x450/png?text=No+Banner';" alt="Banner">
                     </div>
                 </div>
@@ -251,25 +243,15 @@
                         <input type="text" id="edit-title" name="title" class="form-control editform" placeholder="Nhập tên phim" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Thể loại</label>
-                        <select id="edit-genre" name="genre" class="form-select editform" required>
-                            <option value="" disabled selected>-- Chọn thể loại --</option>
-                            <option value="Hành động">Hành động</option>
-                            <option value="Tình cảm">Tình cảm</option>
-                            <option value="Hài hước">Hài hước</option>
-                            <option value="Kinh dị">Kinh dị</option>
-                            <option value="Hoạt hình">Hoạt hình</option>
-                            <option value="Viễn tưởng">Viễn tưởng</option>
-                            <option value="Phiêu lưu">Phiêu lưu</option>
+                        <label class="form-label">Danh mục</label>
+                        <select id="edit-category_id" name="category_id" class="form-select editform" required>
+                            <option value="">-- Chọn danh mục --</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Độ tuổi</label>
                         <select id="edit-ageRating" name="ageRating" class="form-select editform" required>
-                            <option value="P">P - Mọi lứa tuổi</option>
-                            <option value="T13">T13 - Trên 13 tuổi</option>
-                            <option value="T16">T16 - Trên 16 tuổi</option>
-                            <option value="T18">T18 - Trên 18 tuổi</option>
+                            <option value="">-- Chọn độ tuổi --</option>
                         </select>
                     </div>
                 </div>

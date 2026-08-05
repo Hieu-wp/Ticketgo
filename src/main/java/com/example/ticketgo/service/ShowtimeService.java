@@ -34,11 +34,12 @@ public class ShowtimeService {
     private final ComboService comboService;
 
 
-    // 1. CHỨC NĂNG THÊM MỚI (Tạo đơn hoặc tạo hàng loạt theo chuỗi lặp)
+    // 1. CHỨC NĂNG THÊM MỚI
 
     @Transactional
     public List<ShowtimeResponse> createShowtimes(ShowtimeCreateRequest request) {
         LocalDate today = LocalDate.now();
+        LocalTime timeLimit = LocalTime.now().plusHours(1); // Mốc thời gian: Hiện tại + 1 giờ
 
         Film movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim!"));
@@ -73,15 +74,28 @@ public class ShowtimeService {
             datesToSchedule.add(request.getSingleDate());
         }
 
-        // Lấy danh sách Combo tùy chọn
         List<Combo> selectedCombos = getCombosFromIds(request.getComboIds());
-        List<Showtime> createdList = new ArrayList<>();
+        List<Showtime> validShowtimesToCreate = new ArrayList<>();
+        List<String> invalidTimeMessages = new ArrayList<>();
 
         for (LocalDate showDate : datesToSchedule) {
             for (LocalTime startTime : request.getStartTimes()) {
+
+                // KIỂM TRA ĐIỀU KIỆN GIỜ CHIẾU VỚI NGÀY HÔM NAY (Phải > Hiện tại + 1 tiếng)
+                if (showDate.isEqual(today) && !startTime.isAfter(timeLimit)) {
+                    if (Boolean.TRUE.equals(request.getIsRepeat())) {
+                        // Trường hợp LẶP: Ghi nhận vết lỗi để hỏi xác nhận
+                        invalidTimeMessages.add(String.format("%s ngày %s", startTime, showDate));
+                        continue;
+                    } else {
+                        // Trường hợp ĐƠN LẺ: Bắn lỗi ngay lập tức
+                        throw new InvalidInputException("Thời gian chiếu đã qua, vui lòng chọn thời gian khác!");
+                    }
+                }
+
                 LocalTime endTime = startTime.plusMinutes(movie.getDuration());
 
-                // Kiểm tra trùng
+                // Kiểm tra trùng lịch
                 if (showtimeRepository.existsOverlappingShowtime(room.getId(), showDate, startTime, endTime)) {
                     throw new InvalidInputException(String.format(
                             "Phòng '%s' đã có suất chiếu trùng khung giờ %s - %s ngày %s!",
@@ -100,10 +114,25 @@ public class ShowtimeService {
                         .combos(selectedCombos)
                         .build();
 
-                createdList.add(showtimeRepository.save(showtime));
+                validShowtimesToCreate.add(showtime);
             }
         }
 
+        // BẮT CỜ XÁC NHẬN CHO TRƯỜNG HỢP LẶP LỊCH
+        if (!invalidTimeMessages.isEmpty()) {
+            if (!Boolean.TRUE.equals(request.getIsConfirmSkipInvalid())) {
+                String errorMsg = "Thời gian suất chiếu " + String.join(", ", invalidTimeMessages) +
+                        " đã qua. Bạn có muốn tạo các suất chiếu hợp lệ còn lại không? | REQUIRE_CONFIRM";
+                throw new InvalidInputException(errorMsg);
+            }
+        }
+
+        if (validShowtimesToCreate.isEmpty()) {
+            throw new InvalidInputException("Không có suất chiếu nào hợp lệ để tạo!");
+        }
+
+        // Tối ưu lưu hàng loạt
+        List<Showtime> createdList = showtimeRepository.saveAll(validShowtimesToCreate);
         return createdList.stream().map(this::mapToResponse).toList();
     }
 
@@ -137,16 +166,24 @@ public class ShowtimeService {
         return mapToResponse(showtime);
     }
 
-    // =========================================================================
+
     // 3. CHỨC NĂNG SỬA SUẤT CHIẾU
-    // =========================================================================
+
     @Transactional
     public ShowtimeResponse updateShowtime(String id, ShowtimeUpdateRequest request) {
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu ID: " + id));
 
-        if (request.getShowDate().isBefore(LocalDate.now())) {
+        LocalDate today = LocalDate.now();
+        LocalTime timeLimit = LocalTime.now().plusHours(1);
+
+        if (request.getShowDate().isBefore(today)) {
             throw new InvalidInputException("Ngày chiếu không được ở quá khứ!");
+        }
+
+        // KIỂM TRA ĐIỀU KIỆN GIỜ CHIẾU KHI SỬA THÀNH NGÀY HÔM NAY
+        if (request.getShowDate().isEqual(today) && !request.getStartTime().isAfter(timeLimit)) {
+            throw new InvalidInputException("Thời gian chiếu đã qua, vui lòng chọn thời gian khác!");
         }
 
         Film movie = movieRepository.findById(request.getMovieId())
@@ -242,8 +279,11 @@ public class ShowtimeService {
         Film movie = showtime.getMovie();
         ScreeningRoom room = showtime.getRoom();
 
+        String movieCategoryName = movie.getCategory() != null ? movie.getCategory().getName() : "";
+
         ResponseMovie movieRecord = new ResponseMovie(
-                movie.getId(), movie.getTitle(), movie.getDuration(), movie.getPosterUrl()
+                movie.getId(), movie.getTitle(), movie.getDuration(), movie.getPosterUrl(),
+                movieCategoryName
         );
 
         ResponseScreeningRoom roomRecord = new ResponseScreeningRoom(

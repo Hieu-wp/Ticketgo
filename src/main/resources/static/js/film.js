@@ -1,4 +1,73 @@
-// Chuyển đổi hiển thị giữa danh sách phim và form thêm mới/chỉnh sửa.
+// Biến toàn cục lưu lại nút Sửa đang được bấm
+let currentEditButton = null;
+
+
+// 1. CÁC HÀM HIỂN THỊ MODAL THÔNG BÁO / LỖI
+
+function showAppModal(message, type = 'success', title = null) {
+    return new Promise((resolve) => {
+        const isError = type === 'error' || type === 'danger';
+        const modalId = isError ? 'appErrorModal' : 'appSuccessModal';
+        let modalEl = document.getElementById(modalId);
+
+        if (!modalEl) {
+            const iconClass = isError
+                ? 'fa-solid fa-circle-xmark text-danger'
+                : 'fa-solid fa-circle-check text-success';
+            const defaultTitle = isError ? 'Đã xảy ra lỗi' : 'Thành công!';
+            const btnClass = isError ? 'btn-danger' : 'btn-success';
+
+            const modalHtml = `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                        <div class="modal-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="${iconClass} display-3 opacity-75"></i>
+                            </div>
+                            <h5 class="fw-bold mb-2 text-dark modal-title-text">${title || defaultTitle}</h5>
+                            <p class="text-muted small mb-4 modal-message-text">${message}</p>
+                            <div class="d-flex justify-content-center">
+                                <button type="button" class="btn ${btnClass} px-4 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal">
+                                    Đồng ý
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modalEl = document.getElementById(modalId);
+        } else {
+            const titleEl = modalEl.querySelector('.modal-title-text') || modalEl.querySelector('#successModalTitle') || modalEl.querySelector('#errorModalTitle');
+            const msgEl = modalEl.querySelector('.modal-message-text') || modalEl.querySelector('#successModalMessage') || modalEl.querySelector('#errorModalMessage');
+
+            if (titleEl) titleEl.textContent = title || (isError ? 'Đã xảy ra lỗi' : 'Thành công!');
+            if (msgEl) msgEl.textContent = message;
+        }
+
+        const modalInstance = new bootstrap.Modal(modalEl);
+
+        modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+            resolve();
+        });
+
+        modalInstance.show();
+    });
+}
+
+function showSuccessModal(message, title = 'Thành công!') {
+    return showAppModal(message, 'success', title);
+}
+
+function showErrorModal(message, title = 'Có lỗi xảy ra!') {
+    return showAppModal(message, 'error', title);
+}
+
+
+// 2. CHUYỂN ĐỔI GIAO DIỆN (DANH SÁCH / THÊM / SỬA)
+
 function showView(viewName) {
     const listView = document.getElementById('view-list');
     const configView = document.getElementById('view-config');
@@ -8,14 +77,20 @@ function showView(viewName) {
         if (listView) listView.style.display = 'block';
         if (configView) configView.style.display = 'none';
         if (editForm) editForm.style.display = 'none';
-    } else {
+    } else if (viewName === 'config') {
         if (listView) listView.style.display = 'none';
         if (configView) configView.style.display = 'block';
         if (editForm) editForm.style.display = 'none';
+    } else if (viewName === 'edit') {
+        if (listView) listView.style.display = 'none';
+        if (configView) configView.style.display = 'none';
+        if (editForm) editForm.style.display = 'block';
     }
 }
 
-// Xem trước ảnh poster khi chọn file trong form thêm mới.
+
+// 3. HÀM PREVIEW ẢNH KHI UPLOAD
+
 function previewLocalFile(input) {
     const imgElement = document.getElementById('img-render');
     const placeholderText = document.getElementById('placeholder-text');
@@ -39,7 +114,6 @@ function previewLocalFile(input) {
     }
 }
 
-// Xem trước ảnh banner khi chọn file trong form thêm mới.
 function previewLocalBanner(input) {
     const imgElement = document.getElementById('banner-render');
     const placeholderText = document.getElementById('banner-placeholder-text');
@@ -63,7 +137,6 @@ function previewLocalBanner(input) {
     }
 }
 
-// Xem trước ảnh poster khi chọn file trong form cập nhật.
 function previewImage(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -75,7 +148,6 @@ function previewImage(input) {
     }
 }
 
-// Xem trước ảnh banner khi chọn file trong form cập nhật.
 function previewBanner(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -87,82 +159,111 @@ function previewBanner(input) {
     }
 }
 
-// Upload file ảnh lên Supabase Storage và trả về đường dẫn Public URL đầy đủ.
+
+// 4. UPLOAD ẢNH LÊN SUPABASE
+
 async function uploadToSupabaseStorage(file, folder = 'posters') {
     if (!file) return null;
     const fileExt = file.name.split('.').pop();
     const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-    // Tải ảnh lên Bucket 'movies' trên Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage.from('movies').upload(fileName, file);
     if (uploadError) throw uploadError;
 
-    // Lấy link công khai (Public URL)
     const { data: urlData } = supabase.storage.from('movies').getPublicUrl(fileName);
     return urlData.publicUrl;
 }
 
-// Đổ dữ liệu chi tiết của phim được chọn vào các ô nhập liệu của form chỉnh sửa.
-function openEditForm(button) {
-    const form = document.getElementById('editFilmForm');
-    if (!form) return;
 
-    form.style.display = 'block';
-    const listView = document.getElementById('view-list');
-    const configView = document.getElementById('view-config');
-    if (listView) listView.style.display = 'none';
-    if (configView) configView.style.display = 'none';
+// 5. NẠP DROPDOWN DANH MỤC VÀ ĐỘ TUỔI ĐỘNG
 
-    const setInputValue = (id, attr) => {
-        const el = document.getElementById(id);
-        if (el) el.value = button.getAttribute(attr) || '';
-    };
+function populateSelectOptions(selectIds, items, valueKey, labelFn) {
+    selectIds.forEach(id => {
+        const selectEl = document.getElementById(id);
+        if (!selectEl) return;
 
-    setInputValue('edit-id', 'data-id');
-    setInputValue('edit-title', 'data-title');
-    setInputValue('edit-genre', 'data-genre');
-    setInputValue('edit-duration', 'data-duration');
-    setInputValue('edit-rating', 'data-rating');
-    setInputValue('edit-ageRating', 'data-age-rating');
-    setInputValue('edit-releaseDate', 'data-release-date');
-    setInputValue('edit-synopsis', 'data-synopsis');
-    setInputValue('edit-director', 'data-director');
-    setInputValue('edit-cast', 'data-cast');
+        const currentValue = selectEl.value;
+        selectEl.innerHTML = '<option value="">-- Chọn --</option>';
 
-    const isNowShowingEl = document.getElementById('edit-isNowShowing');
-    if (isNowShowingEl) {
-        isNowShowingEl.checked = button.getAttribute('data-is-now-showing') === 'true';
-    }
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item[valueKey];
+            opt.textContent = labelFn ? labelFn(item) : item[valueKey];
+            selectEl.appendChild(opt);
+        });
 
-    const posterUrl = button.getAttribute('data-poster');
-    const imagePreview = document.getElementById('imagePreview');
-    if (imagePreview) {
-        imagePreview.src = posterUrl ? posterUrl : '/images/default-poster.jpg';
-    }
+        if (currentValue) selectEl.value = currentValue;
+    });
+}
 
-    const bannerUrl = button.getAttribute('data-banner');
-    const bannerPreview = document.getElementById('bannerPreview');
-    if (bannerPreview) {
-        bannerPreview.src = bannerUrl ? bannerUrl : '/images/default-banner.jpg';
+async function loadDynamicDropdowns() {
+    try {
+        const catResponse = await fetch('/api/categories?size=100');
+        if (catResponse.ok) {
+            const pageData = await catResponse.json();
+            const categories = pageData.content || pageData;
+            populateSelectOptions(['add-category_id', 'edit-category_id'], categories, 'id', c => c.name);
+        }
+
+        const ageResponse = await fetch('/api/categories/age-ratings');
+        if (ageResponse.ok) {
+            const ageRatings = await ageResponse.json();
+            populateSelectOptions(['add-ageRating', 'edit-ageRating'], ageRatings, 'code', a => `${a.code} ${a.description ? '(' + a.description + ')' : ''}`);
+        }
+    } catch (err) {
+        console.error("Lỗi khi tải dữ liệu danh mục/độ tuổi:", err);
     }
 }
 
 
+// 6. MỞ FORM EDIT VÀ ĐỔ DỮ LIỆU ĐANG CÓ
+
+function openEditForm(button) {
+    currentEditButton = button;
+    const ds = button.dataset;
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+    };
+
+    setVal('edit-id', ds.id);
+    setVal('edit-title', ds.title);
+    setVal('edit-category_id', ds.categoryId);
+    setVal('edit-ageRating', ds.ageRating);
+    setVal('edit-duration', ds.duration);
+    setVal('edit-director', ds.director);
+    setVal('edit-cast', ds.cast);
+    setVal('edit-synopsis', ds.synopsis);
+
+    const imgPreview = document.getElementById('imagePreview');
+    if (imgPreview && ds.poster) imgPreview.src = ds.poster;
+
+    const bannerPreview = document.getElementById('bannerPreview');
+    if (bannerPreview && ds.banner) bannerPreview.src = ds.banner;
+
+    showView('edit');
+}
+
+
+// 7. SỰ KIỆN KHI TRANG KHỞI TẠO (DOM CONTENT LOADED)
+
 window.addEventListener('DOMContentLoaded', () => {
 
+    loadDynamicDropdowns();
 
-    // 1. XỬ LÝ SUBMIT FORM THÊM PHIM MỚI
 
-    const addForm = document.getElementById('addFilmForm') || document.getElementById('form-add-film');
+    // A. XỬ LÝ SUBMIT FORM THÊM PHIM MỚI
+
+    const addForm = document.getElementById('addFilmForm');
     if (addForm) {
         addForm.addEventListener('submit', async function(event) {
             event.preventDefault();
 
             try {
-                const posterFileInput = document.getElementById('posterInput') || addForm.querySelector('input[name="poster"]');
-                const bannerFileInput = document.getElementById('bannerInput') || addForm.querySelector('input[name="banner"]');
+                const posterFileInput = document.getElementById('poster-file-input');
+                const bannerFileInput = document.getElementById('banner-file-input');
 
-                // Tải ảnh lên Supabase Storage nếu người dùng chọn file
                 let posterUrl = "";
                 let bannerUrl = "";
 
@@ -173,7 +274,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     bannerUrl = await uploadToSupabaseStorage(bannerFileInput.files[0], 'banners');
                 }
 
-                // Chuẩn bị dữ liệu gửi lên máy chủ / Supabase DB
                 const formData = new FormData(addForm);
                 if (posterUrl) formData.set('poster_url', posterUrl);
                 if (bannerUrl) formData.set('banner_url', bannerUrl);
@@ -184,106 +284,127 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (response.ok) {
-                    alert('🎉 Thêm phim mới thành công!');
+                    await showSuccessModal('🎉 Thêm phim mới thành công!');
                     location.reload();
                 } else {
                     const errText = await response.text();
-                    alert('Lỗi thêm phim: ' + errText);
+                    showErrorModal('Lỗi thêm phim: ' + errText);
                 }
             } catch (err) {
                 console.error("Lỗi:", err);
-                alert("Lỗi upload ảnh hoặc kết nối máy chủ: " + err.message);
+                showErrorModal("Lỗi upload ảnh hoặc kết nối máy chủ: " + err.message);
             }
         });
     }
 
 
-    // 2. XỬ LÝ SUBMIT FORM CHỈNH SỬA PHIM
+    //  XỬ LÝ SUBMIT FORM CHỈNH SỬA PHIM
 
     const editForm = document.getElementById('editFilmForm');
-    if (editForm) {
-        editForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
+        if (editForm) {
+            editForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
 
-            try {
-                const formData = new FormData(editForm);
-                const posterFileInput = editForm.querySelector('input[name="poster"]');
-                const bannerFileInput = editForm.querySelector('input[name="banner"]');
+                try {
+                    const formData = new FormData(editForm);
+                    const posterFileInput = document.getElementById('imageUpload');
+                    const bannerFileInput = document.getElementById('bannerUpload');
 
-                // Nếu chọn ảnh poster/banner mới thì upload lại lấy Public URL mới
-                if (posterFileInput && posterFileInput.files[0]) {
-                    const newPosterUrl = await uploadToSupabaseStorage(posterFileInput.files[0], 'posters');
-                    formData.set('poster_url', newPosterUrl);
-                }
-                if (bannerFileInput && bannerFileInput.files[0]) {
-                    const newBannerUrl = await uploadToSupabaseStorage(bannerFileInput.files[0], 'banners');
-                    formData.set('banner_url', newBannerUrl);
-                }
-
-                const response = await fetch('/films/edit', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    showView('list');
-
-                    const successModalEl = document.getElementById('successModal');
-                    if (successModalEl) {
-                        const successModal = new bootstrap.Modal(successModalEl);
-                        successModal.show();
+                    if (posterFileInput && posterFileInput.files[0]) {
+                        const newPosterUrl = await uploadToSupabaseStorage(posterFileInput.files[0], 'posters');
+                        formData.set('poster_url', newPosterUrl);
+                    }
+                    if (bannerFileInput && bannerFileInput.files[0]) {
+                        const newBannerUrl = await uploadToSupabaseStorage(bannerFileInput.files[0], 'banners');
+                        formData.set('banner_url', newBannerUrl);
                     }
 
-                    const filmId = formData.get('id');
-                    const cardElement = document.getElementById(`film-card-${filmId}`);
+                    const response = await fetch('/films/edit', {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                    if (cardElement) {
-                        const titleEl = cardElement.querySelector('.movie-title');
-                        if (titleEl) titleEl.textContent = formData.get('title');
+                    if (response.ok) {
+                        let updatedFilm = null;
+                        try {
+                            updatedFilm = await response.json();
+                        } catch (e) {}
 
-                        const imgPreviewEl = document.getElementById('imagePreview');
-                        const cardImgEl = cardElement.querySelector('.movie-poster');
-                        if (imgPreviewEl && cardImgEl) {
-                            cardImgEl.src = imgPreviewEl.src;
+                        const filmId = formData.get('id') || (updatedFilm ? updatedFilm.id : '');
+
+                        // 1. Tìm đúng thẻ Card phim trên giao diện
+                        let cardElement = document.getElementById(`film-card-${filmId}`);
+                        if (!cardElement && currentEditButton) {
+                            cardElement = currentEditButton.closest('.movie-card');
                         }
 
-                        // Cập nhật lại các data-* attributes để phục vụ lần mở form sửa tiếp theo
-                        const editBtn = cardElement.querySelector('[onclick*="openEditForm"]');
-                        if (editBtn) {
-                            editBtn.setAttribute('data-title', formData.get('title') || '');
-                            editBtn.setAttribute('data-genre', formData.get('genre') || '');
-                            editBtn.setAttribute('data-duration', formData.get('duration') || '');
-                            editBtn.setAttribute('data-rating', formData.get('rating') || '');
-                            editBtn.setAttribute('data-age-rating', formData.get('ageRating') || '');
-                            editBtn.setAttribute('data-release-date', formData.get('releaseDate') || '');
-                            editBtn.setAttribute('data-synopsis', formData.get('synopsis') || '');
-                            editBtn.setAttribute('data-director', formData.get('director') || '');
-                            editBtn.setAttribute('data-cast', formData.get('cast') || '');
-                            editBtn.setAttribute('data-is-now-showing', editForm.querySelector('#edit-isNowShowing')?.checked ? 'true' : 'false');
-                            if (imgPreviewEl) editBtn.setAttribute('data-poster', imgPreviewEl.src);
+                        // 2. CẬP NHẬT DỮ LIỆU TỨC THÌ LÊN CARD PHIM
+                        if (cardElement) {
+                            // Tên phim
+                            const titleVal = updatedFilm?.title || formData.get('title');
+                            const titleEl = cardElement.querySelector('.movie-title');
+                            if (titleEl) titleEl.textContent = titleVal;
+
+                            // Tên Danh mục
+                            const categorySelect = document.getElementById('edit-category_id');
+                            let categoryName = updatedFilm?.categoryName || '';
+                            if (!categoryName && categorySelect && categorySelect.selectedIndex >= 0) {
+                                categoryName = categorySelect.options[categorySelect.selectedIndex].text;
+                                if (categoryName.startsWith('--')) categoryName = '';
+                            }
+                            const pList = cardElement.querySelectorAll('p.text-muted');
+                            if (pList.length > 0) {
+                                const catSpan = pList[0].querySelectorAll('span')[1];
+                                if (catSpan) catSpan.textContent = categoryName;
+                            }
+
+                            // Thời lượng
+                            const durationVal = updatedFilm?.duration || formData.get('duration');
+                            if (pList.length > 1) {
+                                const durSpan = pList[1].querySelector('span.fw-bold') || pList[1].querySelectorAll('span')[1];
+                                if (durSpan) durSpan.textContent = `${durationVal || 0} phút`;
+                            }
+
+                            // Poster ảnh
+                            const cardImgEl = cardElement.querySelector('.movie-poster');
+                            const previewImgEl = document.getElementById('imagePreview');
+                            const finalPosterUrl = updatedFilm?.posterUrl || formData.get('poster_url') || (previewImgEl ? previewImgEl.src : '');
+                            if (cardImgEl && finalPosterUrl) cardImgEl.src = finalPosterUrl;
+
+                            // Đồng bộ lại Dataset cho nút Sửa để nếu mở lại vẫn giữ thông tin mới
+                            const editBtn = currentEditButton || cardElement.querySelector('[onclick*="openEditForm"]');
+                            if (editBtn) {
+                                editBtn.setAttribute('data-id', filmId);
+                                editBtn.setAttribute('data-title', titleVal || '');
+                                editBtn.setAttribute('data-category-id', formData.get('category_id') || '');
+                                editBtn.setAttribute('data-age-rating', formData.get('ageRating') || '');
+                                editBtn.setAttribute('data-duration', durationVal || '');
+                                editBtn.setAttribute('data-director', formData.get('director') || '');
+                                editBtn.setAttribute('data-cast', formData.get('cast') || '');
+                                editBtn.setAttribute('data-synopsis', formData.get('synopsis') || '');
+                                if (finalPosterUrl) editBtn.setAttribute('data-poster', finalPosterUrl);
+                            }
                         }
+
+                        // 3. Quay về màn hình danh sách & Hiện popup thành công
+                        showView('list');
+                        await showSuccessModal('🎉 Cập nhật thông tin phim thành công!');
+
+                    } else {
+                        const errorText = await response.text();
+                        showErrorModal(errorText || 'Có lỗi xảy ra từ máy chủ, không thể lưu dữ liệu!');
                     }
-                } else {
-                    const errorText = await response.text();
-                    alert(errorText || 'Có lỗi xảy ra từ máy chủ, không thể lưu dữ liệu!');
+                } catch (error) {
+                    console.error('Error:', error);
+                    showErrorModal('Lỗi hệ thống khi lưu dữ liệu hoặc upload ảnh!');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Lỗi khi lưu dữ liệu hoặc upload ảnh!');
-            }
-        });
-    }
+            });
+        }
 
-
-    // 3. KIỂM TRA THÔNG BÁO TỪ URL QUERY PARAMS
-
+    // Kiểm tra URL Param nếu reload
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('updateSuccess') === 'true') {
-        const successModalEl = document.getElementById('successModal');
-        if (successModalEl) {
-            const successModal = new bootstrap.Modal(successModalEl);
-            successModal.show();
-        }
+        showSuccessModal('Cập nhật dữ liệu thành công!');
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 });

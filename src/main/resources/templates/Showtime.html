@@ -21,9 +21,10 @@
         <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
         <hr class="text-secondary mx-3 my-2">
         <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
-        <a href="/" class="nav-link"><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
-        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phong chieu</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
         <a href="/showtime" class="nav-link active "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
@@ -47,14 +48,25 @@
             <i class="fa-solid fa-box-open me-1"></i> Cấu hình Combo
         </button>
 
-        <div class="ms-auto filter-box">
-            <i class="fa-solid fa-sliders"></i>
-            <span class="fw-semibold small text-secondary">Lọc theo:</span>
-            <select id="statusFilter" class="form-select form-select-sm filter-select" onchange="renderShowtimeCards()">
-                <option value="ALL">Tất cả suất chiếu</option>
-                <option value="ASSIGNED">Suất chiếu đã thiết lập vé</option>
-                <option value="HIDDEN">Suất chiếu đã ẩn (App)</option>
-            </select>
+        <div class="ms-auto filter-box d-flex gap-2 align-items-center">
+            <!-- 1. Lọc theo Ngày -->
+            <div class="d-flex align-items-center gap-2 bg-white border rounded-3 px-2 py-1 shadow-sm">
+                <i class="fa-regular fa-calendar text-primary"></i>
+                <span class="fw-semibold small text-secondary">Ngày:</span>
+                <input type="date" id="dateFilter" class="form-control form-control-sm border-0 shadow-none px-1" onchange="renderShowtimeCards()">
+            </div>
+
+            <!-- 2. Lọc theo Trạng thái -->
+            <div class="d-flex align-items-center gap-2 bg-white border rounded-3 px-2 py-1 shadow-sm">
+                <i class="fa-solid fa-sliders text-primary"></i>
+                <span class="fw-semibold small text-secondary">Trạng thái:</span>
+                <select id="statusFilter" class="form-select form-select-sm border-0 shadow-none" onchange="renderShowtimeCards()">
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="ASSIGNED">Đã thiết lập vé</option>
+                    <option value="HIDDEN">Đã ẩn</option>
+                    <option value="COMPLETED">Đã chiếu xong</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -80,18 +92,18 @@
                         <span><i class="fa-solid fa-clapperboard me-1"></i> Thông tin phim & thời lượng</span>
                     </div>
 
-                    <!-- Đã sửa: Bỏ phòng chiếu ở đây, chia lại tỷ lệ cột cho chuẩn -->
+
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold text-dark">Tên phim áp dụng <span class="text-danger">*</span></label>
                             <select class="form-select py-2 border-dark fw-medium" id="add-select-movie" name="movieId" required onchange="onMovieSelectChange()">
-                                <option value="" selected disabled>-- Chọn phim --</option>
+                                <option value="" selected disabled>Chọn tên phim</option>
                             </select>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-dark">Thời lượng phim</label>
-                            <input type="text" class="form-control py-2 bg-light" id="add-duration" readonly placeholder="Tự động điền">
+                            <input type="text" class="form-control py-2 bg-light" id="add-duration" readonly >
                         </div>
 
                         <div class="col-md-12 my-2" id="repeat-switch-container">
@@ -131,7 +143,7 @@
                             </div>
                         </div>
 
-                        <!-- Khung tự động tạo ca chiếu kèm chọn phòng -->
+
                         <div id="dynamic-slots-container" class="col-md-12"></div>
                     </div>
 
@@ -142,13 +154,13 @@
                     <div class="price-config-box">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-secondary">Đơn giá Vé Ghế Thường (VNĐ)</label>
-                                <input type="number" class="form-control form-control-lg border-secondary fw-bold text-dark" id="ticket-regular-price" name="regularPrice" placeholder="Ví dụ: 80000" oninput="calculateVipPricePreview()" required>
+                                <label class="form-label fw-semibold text-secondary">Đơn giá Vé Ghế Thường </label>
+                                <input type="number" class="form-control form-control-lg border-secondary fw-bold text-dark" id="ticket-regular-price" name="regularPrice" placeholder="Nhập giá vé" oninput="calculateVipPricePreview()" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Tỉ giá phần trăm Ghế VIP (%)</label>
+                                <label class="form-label fw-semibold text-dark">Tỉ giá phần trăm Ghế VIP </label>
                                 <div class="input-group">
-                                    <input type="number" class="form-control form-control-lg border-dark fw-bold text-dark" id="ticket-vip-percent" name="vipPercent" placeholder="20" value="20" oninput="calculateVipPricePreview()" required>
+                                    <input type="number" class="form-control form-control-lg border-dark fw-bold text-dark" id="ticket-vip-percent" name="vipPercent"  oninput="calculateVipPricePreview()" required>
                                     <span class="input-group-text bg-dark text-white fw-bold">%</span>
                                 </div>
                                 <small class="text-muted mt-1 d-block" id="vip-price-preview">Dự kiến giá ghế VIP: <strong class="text-dark">0 VNĐ</strong></small>
@@ -157,7 +169,7 @@
 
                         <div class="mt-4">
                             <label class="form-label fw-bold text-dark mb-2">
-                                <i class="fa-solid fa-box-open me-1 text-warning"></i> Chọn Combo áp dụng cho suất chiếu (tùy chọn)
+                                <i class="fa-solid fa-box-open me-1 text-warning"></i> Chọn Combo áp dụng cho suất chiếu
                             </label>
                             <div id="combo-checkbox-list" class="p-3 bg-light rounded-3 border"></div>
                         </div>

@@ -5,5 +5,6 @@ public record ResponseMovie(
         String id,
         String title,
         Integer duration,
-        String posterUrl
+        String posterUrl,
+        String categoryName
 ) {}

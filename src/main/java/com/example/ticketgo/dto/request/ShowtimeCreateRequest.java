@@ -28,14 +28,14 @@ public class ShowtimeCreateRequest {
     @Builder.Default
     private Boolean isRepeat = false;
 
-    // Dùng khi tạo 1 suất chiếu đơn (isRepeat = false)
-    private LocalDate singleDate;
 
-    // Dùng khi tạo chuỗi suất chiếu lặp theo ngày (isRepeat = true)
+    @Builder.Default
+    private Boolean isConfirmSkipInvalid = false;
+
+    private LocalDate singleDate;
     private LocalDate startDate;
     private LocalDate endDate;
 
-    // Danh sách các khung giờ chiếu trong ngày (ví dụ: [09:00, 14:30, 19:00])
     @NotEmpty(message = "Vui lòng chọn ít nhất 1 khung giờ chiếu")
     private List<LocalTime> startTimes;
 
@@ -44,8 +44,7 @@ public class ShowtimeCreateRequest {
     private Double regularPrice;
 
     @NotNull(message = "Tỉ giá phần trăm ghế VIP không được để trống")
-    private Double vipPercent; // Mặc định giao diện truyền 20.0
+    private Double vipPercent;
 
-    // Danh sách ID Combo áp dụng (TÙY CHỌN - có thể gửi null hoặc mảng rỗng)
     private List<String> comboIds;
 }

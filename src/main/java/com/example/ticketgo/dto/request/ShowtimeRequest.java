@@ -34,7 +34,7 @@ public class ShowtimeRequest {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    // Danh sách khung giờ bắt đầu trong ngày (được tự động sinh từ ô nhập số lượng ca)
+    // Danh sách khung giờ bắt đầu trong ngày
     @NotEmpty(message = "Vui lòng nhập ít nhất 1 khung giờ chiếu")
     private List<LocalTime> startTimes;
 

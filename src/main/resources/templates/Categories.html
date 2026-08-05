@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineAstra Control - Quản Lý Danh Mục</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/Category.css">
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
+        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link active"><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
+        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Quản Lý Danh Mục Phim
+            </h3>
+            <p class="text-muted mb-0 small">Quản lý thể loại phim và phân loại độ tuổi</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn fw-semibold px-3 py-2" style="background: white; border: 1.5px solid #e2e8f0; border-radius: 12px; color: #475569;"
+                    data-bs-toggle="modal" data-bs-target="#addAgeModal">
+                <i class="fa-solid fa-user-shield me-2" style="color: #f59e0b;"></i>Thêm độ tuổi
+            </button>
+            <button class="btn text-white fw-bold px-4 py-2 shadow-sm" style="background: var(--purple-radiant); border-radius: 12px;"
+                    data-bs-toggle="modal" data-bs-target="#addCategoryModal" onclick="openAddCategoryModal()">
+                <i class="fa-solid fa-plus me-2"></i>Thêm danh mục
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Danh mục -->
+    <div class="content-card">
+        <div class="p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-list me-2 text-primary"></i>Danh sách danh mục</h6>
+            <div class="input-group" style="max-width: 280px;">
+                <span class="input-group-text bg-white border-end-0" style="border-radius: 10px 0 0 10px;"><i class="fa-solid fa-search text-muted"></i></span>
+                <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Tìm danh mục..." style="border-radius: 0 10px 10px 0;" onkeyup="handleSearch()">
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="categoryTable">
+                <thead>
+                <tr>
+                    <th style="width:60px;">#</th>
+                    <th>Tên danh mục</th>
+                    <th>Mô tả</th>
+                    <th class="text-center">Số phim</th>
+                    <th class="text-center" style="width:150px;">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="categoryTableBody">
+                <!-- Dữ liệu danh mục do JS render -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+            <div class="pagination-info" id="paginationInfo">Hiển thị 0 – 0 / 0</div>
+            <div class="d-flex align-items-center gap-2" id="paginationBtns">
+                <!-- Nút phân trang render bởi JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Thêm / Sửa Danh mục (Đã xóa onsubmit trùng lặp) -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-header-gradient">
+                <h5 class="modal-title fw-bold text-white" id="categoryModalTitle">
+                    <i class="fa-solid fa-square-plus me-2"></i>Thêm Danh Mục Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="categoryForm">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="categoryId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên danh mục <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="categoryName" placeholder="Ví dụ: Hành động, Hài, Tình cảm..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả</label>
+                        <textarea class="form-control" id="categoryDesc" rows="3" placeholder="Mô tả ngắn về danh mục..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3">
+                    <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn text-white fw-bold px-4" style="background: var(--purple-radiant); border-radius: 10px;">
+                        <i class="fa-solid fa-save me-1"></i> Lưu danh mục
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Thêm Độ tuổi -->
+<div class="modal fade" id="addAgeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-header-gradient">
+                <h5 class="modal-title fw-bold text-white">
+                    <i class="fa-solid fa-user-shield me-2"></i>Thêm Phân Loại Độ Tuổi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Mã / Độ tuổi <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="ageCode" placeholder="Ví dụng: trên 8 tuổi..." maxlength="50">
+                        <button type="button" class="btn text-white fw-semibold px-3" style="background: var(--purple-radiant); border-radius: 0 10px 10px 0;" onclick="addAge()">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label small fw-semibold text-muted mb-2">Danh sách độ tuổi đã thêm</label>
+                    <div class="age-list" id="modalAgeList">
+                        <!-- JS render danh sách độ tuổi tại đây -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light p-3">
+                <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Xem chi tiết Danh mục -->
+<div class="modal fade" id="detailCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header modal-header-gradient">
+                <h5 class="modal-title fw-bold text-white" id="detailTitle">
+                    <i class="fa-solid fa-circle-info me-2"></i>Chi tiết danh mục
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-5">
+                        <div class="bg-light rounded-3 p-4 h-100">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-info-circle me-2"></i>Thông tin danh mục</h6>
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Tên danh mục</small>
+                                <span class="fw-bold fs-5" id="detailName">—</span>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Mô tả</small>
+                                <p class="mb-0" id="detailDesc">—</p>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Số lượng phim</small>
+                                <span class="stat-pill" id="detailMovieCount">0 phim</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <h6 class="fw-bold text-warning mb-3"><i class="fa-solid fa-film me-2"></i>Phim thuộc danh mục</h6>
+                        <div id="detailMovieList" style="max-height: 340px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light p-3">
+                <button type="button" class="btn btn-secondary fw-semibold" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn text-white fw-bold px-4" style="background: var(--purple-radiant); border-radius: 10px;" id="detailEditBtn">
+                    <i class="fa-solid fa-pen me-1"></i> Sửa danh mục
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Xác nhận xóa (Confirm Modal) -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body text-center p-4">
+                <div class="text-danger mb-3">
+                    <i class="fa-solid fa-triangle-exclamation display-3 opacity-75"></i>
+                </div>
+                <h5 class="fw-bold mb-2 text-dark" id="confirmModalTitle">Xác nhận thao tác</h5>
+                <p class="text-muted small mb-4" id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold text-secondary" data-bs-dismiss="modal">
+                        Hủy bỏ
+                    </button>
+                    <button type="button" class="btn btn-danger px-4 rounded-pill fw-semibold shadow-sm" id="confirmModalOkBtn">
+                        Đồng ý xóa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Thông báo thành công (Success Modal) -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body text-center p-4">
+                <div class="text-success mb-3">
+                    <i class="fa-solid fa-circle-check display-3 opacity-75"></i>
+                </div>
+                <h5 class="fw-bold mb-2 text-dark" id="successModalTitle">Thành công!</h5>
+                <p class="text-muted small mb-4" id="successModalMessage">Thao tác của bạn đã được thực hiện thành công.</p>
+                <div class="d-flex justify-content-center">
+                    <button type="button" class="btn btn-success px-4 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal">
+                        Đồng ý
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/category.js}"></script>
+</body>
+</html>

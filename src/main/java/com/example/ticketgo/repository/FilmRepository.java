@@ -8,6 +8,10 @@ import java.util.List;
 
 @Repository
 public interface FilmRepository extends JpaRepository<Film, String> {
-    // Thêm hàm này để ép Spring Data JPA luôn sắp xếp phim theo ID tăng dần
     List<Film> findAllByOrderByIdAsc();
+
+    List<Film> findByCategoryId(String categoryId);
+    int countByCategoryId(String categoryId);
+
+
 }

@@ -2,12 +2,12 @@ package com.example.ticketgo.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-
 @Controller
-public class ShowtimeViewController {
+public class CategoryViewController {
 
-    @GetMapping("/showtime")
-    public String showtimePage() {
-        return "Showtime";
+    @GetMapping("/categories")
+    public String showCategoriesPage() {
+
+        return "Categories.html";
     }
 }

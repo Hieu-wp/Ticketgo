@@ -1,0 +1,322 @@
+:root {
+            --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --neon-purple: #a855f7;
+            --neon-pink: #f43f5e;
+            --neon-gold: #fbbf24;
+            --dark-purple: #1e1b4b;
+            --light-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-bg);
+            color: #1e293b;
+        }
+
+        /* Sidebar điều hướng */
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            background: #0f0c29;
+            color: #fff;
+            padding-top: 20px;
+            z-index: 100;
+        }
+
+        .sidebar .brand {
+            padding: 10px 25px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--purple-radiant);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar .nav-link {
+            color: #94a3b8;
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #fff;
+            background: rgba(168, 85, 247, 0.08);
+        }
+
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(168, 85, 247, 0.15);
+            border-left: 4px solid var(--neon-purple);
+            text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Vùng nội dung chính */
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        /* Card & Table */
+        .content-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        .table thead th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 14px 16px;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-color: #f1f5f9;
+            font-size: 0.95rem;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(168, 85, 247, 0.04);
+        }
+
+        .badge-category {
+            background: rgba(168, 85, 247, 0.12);
+            color: #7c3aed;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .badge-age {
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-P { background: #dcfce7; color: #166534; }
+        .badge-K { background: #dbeafe; color: #1e40af; }
+        .badge-T13 { background: #fef3c7; color: #92400e; }
+        .badge-T16 { background: #ffedd5; color: #9a3412; }
+        .badge-T18 { background: #fee2e2; color: #991b1b; }
+        .badge-C { background: #f3e8ff; color: #6b21a8; }
+
+        /* Action buttons - luôn nằm 1 hàng */
+        .action-btns {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-action {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-view { background: #e0e7ff; color: #4338ca; }
+        .btn-view:hover { background: #c7d2fe; }
+        .btn-edit { background: #fef3c7; color: #b45309; }
+        .btn-edit:hover { background: #fde68a; }
+        .btn-delete { background: #fee2e2; color: #b91c1c; }
+        .btn-delete:hover { background: #fecaca; }
+
+        /* Modal styling */
+        .modal-content {
+            border-radius: 24px;
+            border: none;
+            overflow: hidden;
+        }
+
+        .modal-header-gradient {
+            background: var(--purple-radiant);
+            border: none;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border-color: #e2e8f0;
+            padding: 0.6rem 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Detail modal movie list */
+        .movie-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+
+        .movie-item:hover {
+            border-color: var(--neon-purple);
+            background: #faf5ff;
+        }
+
+        .movie-poster {
+            width: 42px;
+            height: 56px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .stat-pill {
+            background: rgba(168, 85, 247, 0.1);
+            color: #7c3aed;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Age list - mỗi dòng 1 hàng */
+        .age-list {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .age-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.15s;
+        }
+
+        .age-row:last-child {
+            border-bottom: none;
+        }
+
+        .age-row:hover {
+            background: #f1f5f9;
+        }
+
+        .age-row .age-label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1e293b;
+        }
+
+        .age-row .btn-remove-age {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: none;
+            background: #fee2e2;
+            color: #b91c1c;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .age-row .btn-remove-age:hover {
+            background: #fecaca;
+        }
+
+        /* Pagination */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .page-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled):not(.active) {
+            border-color: var(--neon-purple);
+            color: var(--neon-purple);
+            background: #faf5ff;
+        }
+
+        .page-btn.active {
+            background: var(--purple-radiant);
+            color: white;
+            border-color: transparent;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
