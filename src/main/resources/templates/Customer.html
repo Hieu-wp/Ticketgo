@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lí khách hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/Customer.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
+        <a href="/showtime" class="nav-link  "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="/customers" class="nav-link active"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="/admin/ticket-desk" class="nav-link "><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+    </div>
+</div>
+
+<!-- Main content -->
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Quản Lý Khách Hàng
+            </h3>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="d-flex justify-content-end align-items-center mb-4">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tên hoặc số điện thoại..." onkeyup="handleSearch()">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                <tr>
+                    <th style="width: 70px;">STT</th>
+                    <th>Tên khách hàng</th>
+                    <th>Số điện thoại</th>
+                    <th>Ngày tạo</th>
+                    <th style="width: 160px;" class="text-center">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="customerTableBody">
+                <!-- JS Render Data -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <span class="text-muted small" id="totalCount">Tổng: 0 khách hàng</span>
+            <nav aria-label="Phân trang khách hàng">
+                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MODAL XEM THÔNG TIN KHÁCH HÀNG ========== -->
+<div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-header-purple border-0 p-4">
+                <h5 class="modal-title fw-bold text-white">
+                    <i class="fa-solid fa-user me-2"></i>Thông tin khách hàng
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="infoContent">
+                <!-- JS Render Detail -->
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MODAL LỊCH SỬ GIAO DỊCH ========== -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header modal-header-purple border-0 p-4">
+                <div>
+                    <h5 class="modal-title fw-bold text-white mb-1">
+                        <i class="fa-solid fa-receipt me-2"></i>Lịch sử giao dịch
+                    </h5>
+                    <small class="text-white-50" id="historyCustomerName">—</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive" id="txTableContainer">
+                    <table class="table table-hover tx-table mb-0">
+                        <thead>
+                        <tr>
+                            <th>Mã GD</th>
+                            <th>Ngày giao dịch</th>
+                            <th>Phim</th>
+                            <th>Phòng</th>
+                            <th>Số ghế</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                        </thead>
+                        <tbody id="txTableBody">
+
+                        </tbody>
+                    </table>
+                </div>
+                <div id="txEmpty" class="text-center py-5 d-none">
+                    <i class="fa-solid fa-inbox fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Chưa có giao dịch nào</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/Customer.js}"></script>
+</body>
+</html>

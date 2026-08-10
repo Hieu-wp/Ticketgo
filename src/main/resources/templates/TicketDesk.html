@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Thanh Toán</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/TicketDesk.css}">
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
+        <a href="/showtime" class="nav-link  "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="/customers" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="/admin/ticket-desk" class="nav-link active"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+    <div class="mb-4">
+        <h1 class="page-title">Quản lý thanh toán</h1>
+        <p class="page-subtitle">Kiểm tra vé • Bán vé tại quầy • Sơ đồ phòng chiếu</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- 1. KIỂM TRA VÉ -->
+        <div class="col-lg-5">
+            <div class="card-custom h-100">
+                <div class="card-header-custom">
+                    <i class="fa-solid fa-qrcode"></i> Kiểm tra vé hợp lệ
+                </div>
+                <div class="card-body-custom">
+                    <p class="text-muted mb-3" style="font-size:0.9rem;">
+                        Nhập mã vé để xác minh tính hợp lệ của vé.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label-custom" for="ticket-code">Mã vé</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-custom" id="ticket-code" name="ticketCode"
+                                   placeholder="VD: TK-XXXXXX" autocomplete="off" style="border-radius:10px 0 0 10px;">
+                            <button class="btn btn-purple" type="button" onclick="checkTicket()" style="border-radius:0 10px 10px 0;">
+                                <i class="fa-solid fa-search me-1"></i> Kiểm tra
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="result-box" id="check-result" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1" id="result-status-text" style="font-weight:700;"></h5>
+                                <small class="text-muted" id="result-code"></small>
+                            </div>
+                            <span id="result-badge"></span>
+                        </div>
+                        <div class="row g-2" id="result-details"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. TẠO VÉ BÁN TẠI QUẦY -->
+        <div class="col-lg-7">
+            <div class="card-custom h-100">
+                <div class="card-header-custom">
+                    <i class="fa-solid fa-ticket"></i> Tạo vé bán tại quầy
+                </div>
+                <div class="card-body-custom">
+                    <form id="create-ticket-form" onsubmit="createTicket(event)">
+                        <!-- Thông tin khách -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="customer-name">Họ tên khách hàng</label>
+                                <input type="text" class="form-control form-control-custom" id="customer-name" name="customerName" placeholder="Nhập họ tên khách hàng" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="customer-phone">Số điện thoại</label>
+                                <input type="tel" class="form-control form-control-custom" id="customer-phone" name="customerPhone" placeholder="09xx xxx xxx">
+                            </div>
+                        </div>
+
+                        <!-- Chọn phim + Combo -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="movie-select">Chọn phim</label>
+                                <select class="form-select form-select-custom" id="movie-select" name="movieId" required onchange="onMovieChange()">
+                                    <option value="">-- Chọn tên phim --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="combo-select">Combo bắp &amp; nước</label>
+                                <select class="form-select form-select-custom" id="combo-select" name="comboId" onchange="onComboChange()">
+                                    <option value="">-- Không chọn combo --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Checklist tùy chọn combo: Nước | Bắp -->
+                        <div class="combo-options" id="combo-options" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="combo-col-title"><i class="fa-solid fa-glass-water"></i> Nước</div>
+                                    <p class="combo-hint" id="drink-hint">Chọn loại nước</p>
+                                    <div id="drink-list"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="combo-col-title"><i class="fa-solid fa-bowl-food"></i> Bắp</div>
+                                    <p class="combo-hint" id="popcorn-hint">Chọn vị bắp</p>
+                                    <div id="popcorn-list"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách suất chiếu -->
+                        <div class="mb-3" id="showtime-section" style="display:none;">
+                            <label class="form-label-custom">Suất chiếu</label>
+                            <div id="showtime-list"></div>
+                        </div>
+
+                        <!-- Tổng tiền + nút tạo -->
+                        <div id="checkout-section" style="display:none;">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3 mb-3"
+                                 style="background:#faf5ff; border:1px solid #e9d5ff;">
+                                <div>
+                                    <span class="text-muted fw-semibold">Ghế đã chọn: </span>
+                                    <span class="fw-bold" style="color:#7c3aed;" id="selected-seats-label">—</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted fw-semibold me-2">Tổng:</span>
+                                    <span class="fs-5 fw-bold" style="color:#7c3aed;" id="total-price">0 ₫</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-purple w-100" id="btn-create" disabled>
+                                <i class="fa-solid fa-check-circle me-2"></i> Tạo vé &amp; Thanh toán
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="result-box valid" id="create-result" style="display: none;">
+                        <div class="text-center mb-2">
+                            <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:#059669;"></i>
+                        </div>
+                        <h5 class="text-center mb-3" style="font-weight:700; color:#059669;">Tạo vé thành công</h5>
+                        <div id="create-result-details"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. SƠ ĐỒ PHÒNG CHIẾU -->
+    <div class="section-divider"></div>
+    <div class="card-custom">
+        <div class="card-header-custom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="fa-solid fa-couch"></i> Sơ đồ phòng chiếu</span>
+            <div style="min-width:180px;">
+                <select class="form-select form-select-custom" id="room-filter" name="roomId" onchange="onRoomFilterChange()" style="padding:0.4rem 0.8rem; font-size:0.85rem;">
+                    <option value="">-- Chọn phòng --</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body-custom">
+            <div id="map-placeholder" class="text-center text-muted py-5">
+                <i class="fa-solid fa-couch" style="font-size:2.5rem; opacity:0.3;"></i>
+                <p class="mt-2 mb-0">Chọn suất chiếu hoặc chọn phòng để xem sơ đồ ghế</p>
+            </div>
+            <div id="seat-map-area" style="display:none;">
+                <div class="map-info-bar">
+                    <div>
+                        <strong id="map-room-name" style="color:#7c3aed;">---</strong>
+                        <span class="text-muted ms-2" id="map-show-info" style="font-size:0.85rem;"></span>
+                    </div>
+                    <div class="text-muted" style="font-size:0.85rem;" id="map-hint">Click ghế để chọn</div>
+                </div>
+                <div class="seat-map-container" id="seat-map-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-success-overlay" id="successModal" style="display: none;">
+    <div class="modal-success-content" id="printable-ticket">
+        <div class="icon-success">✔</div>
+        <h2>Tạo vé thành công</h2>
+
+        <div class="info-grid">
+            <div>
+                <label>Mã đơn (Booking Code):</label>
+                <p class="highlight-blue" id="modalBookingCode">---</p>
+            </div>
+            <div>
+                <label>Khách hàng:</label>
+                <p id="modalCustomer">---</p>
+            </div>
+
+            <div>
+                <label>Mã vé soát tại cửa (5 ký tự):</label>
+                <p class="highlight-purple" id="modalTickets">---</p>
+            </div>
+
+            <div>
+                <label>Phim:</label>
+                <p id="modalMovieName">---</p>
+            </div>
+            <div>
+                <label>Suất chiếu:</label>
+                <p id="modalShowtime">---</p>
+            </div>
+            <div>
+                <label>Ghế chọn:</label>
+                <p id="modalSeatCodes">---</p>
+            </div>
+            <div>
+                <label>Phòng chiếu:</label>
+                <p id="modalRoomName">---</p>
+            </div>
+            <div>
+                <label>Tổng hóa đơn:</label>
+                <p class="highlight-green" id="modalTotalPrice">---</p>
+            </div>
+        </div>
+
+        <!-- Nút thao tác -->
+        <div class="action-buttons no-print">
+            <button onclick="window.print()" class="btn-print">🖨️ In phiếu</button>
+            <button onclick="closeBookingModal()" class="btn-close">Đóng</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/TicketDesk.js}"></script>
+</body>
+</html>

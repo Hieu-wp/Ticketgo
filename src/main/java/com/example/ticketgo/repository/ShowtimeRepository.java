@@ -9,9 +9,29 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ShowtimeRepository extends JpaRepository<Showtime, String> {
+
+    //  LUỒNG ĐẶT VÉ
+
+    // Lấy suất chiếu kèm theo thông tin Room và Movie (Dùng JOIN FETCH để tối ưu hiệu năng)
+    @Query("SELECT s FROM Showtime s JOIN FETCH s.room JOIN FETCH s.movie WHERE s.id = :id")
+    Optional<Showtime> findByIdWithDetails(@Param("id") String id);
+
+    // Lấy danh sách suất chiếu theo ID Phim (phục vụ lấy suất chiếu khi chọn phim tại quầy)
+    @Query("SELECT s FROM Showtime s JOIN FETCH s.room WHERE s.movie.id = :movieId ORDER BY s.showDate ASC, s.startTime ASC")
+    List<Showtime> findByMovieId(@Param("movieId") String movieId);
+
+    // Lấy danh sách suất chiếu của Phim theo Ngày (dùng cho Online/App client)
+    @Query("SELECT s FROM Showtime s JOIN FETCH s.room WHERE s.movie.id = :movieId AND s.showDate = :showDate AND s.status <> 'HIDDEN' ORDER BY s.startTime ASC")
+    List<Showtime> findByMovieIdAndShowDate(
+            @Param("movieId") String movieId,
+            @Param("showDate") LocalDate showDate
+    );
+
+    // các phương thức kiểm tra trùng lịch chiếu
 
     List<Showtime> findByStatus(String status);
 
