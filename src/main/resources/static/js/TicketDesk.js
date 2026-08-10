@@ -573,12 +573,12 @@ state.highlightSeat = null;
           customerName: d.customerName,
           customerPhone: d.customerPhone,
           ticketCode: d.ticketCode,
-          seatType: d.seatType,           // <-- thêm
-          ticketPrice: d.ticketPrice,     // <-- thêm
-          bookingCode: d.bookingCode,     // <-- thêm
-          comboName: d.comboName,         // <-- thêm
-          comboPrice: d.comboPrice,       // <-- thêm
-          totalAmount: d.totalAmount      // <-- thêm
+          seatType: d.seatType,
+          ticketPrice: d.ticketPrice,
+          bookingCode: d.bookingCode,
+          comboName: d.comboName,
+          comboPrice: d.comboPrice,
+          totalAmount: d.totalAmount
         };
       });
     }
@@ -864,40 +864,22 @@ function onComboChange() {
   updateTotal();
 }
 
-function resetBookingFlow() {
-  // Reset toàn bộ state về trạng thái ban đầu
-  state.selectedMovie = null;
-  state.selectedShowtime = null;
-  state.selectedCombo = null;
+function resetBookingFlow(softReset = false) {
+  // Reset các thông tin chọn ghế hiện tại & combo
   state.selectedSeats = [];
-  state.seatLayout = null;
-  state.occupiedSeats = [];
-  state.occupiedDetails = {};
+  state.selectedCombo = null;
   state.highlightSeat = null;
 
   // Reset dropdown chọn phim
   const movieSelect = document.getElementById('movie-select');
   if (movieSelect) movieSelect.value = '';
 
-  // Reset dropdown chọn phòng
-  const roomSelect = document.getElementById('room-filter');
-  if (roomSelect) roomSelect.value = '';
-
-  // Ẩn khu vực suất chiếu và danh sách suất chiếu
-  const showtimeSection = document.getElementById('showtime-section');
-  if (showtimeSection) showtimeSection.style.display = 'none';
-  const showtimeList = document.getElementById('showtime-list');
-  if (showtimeList) showtimeList.innerHTML = '';
-
-  // Ẩn khu vực thanh toán
-  const checkoutSection = document.getElementById('checkout-section');
-  if (checkoutSection) checkoutSection.style.display = 'none';
-
-  // Ẩn sơ đồ ghế, hiện lại placeholder
-  const mapArea = document.getElementById('seat-map-area');
-  if (mapArea) mapArea.style.display = 'none';
-  const placeholder = document.getElementById('map-placeholder');
-  if (placeholder) placeholder.style.display = 'block';
+  // Reset combo
+  const comboSelect = document.getElementById('combo-select');
+  if (comboSelect) comboSelect.value = '';
+  const comboOptions = document.getElementById('combo-options');
+  if (comboOptions) comboOptions.style.display = 'none';
+  document.querySelectorAll('.drink-checkbox, .popcorn-checkbox').forEach(cb => cb.checked = false);
 
   // Reset tổng tiền và nhãn ghế đã chọn
   const totalEl = document.getElementById('total-price');
@@ -907,16 +889,43 @@ function resetBookingFlow() {
   const btnCreate = document.getElementById('btn-create');
   if (btnCreate) btnCreate.disabled = true;
 
-  // Reset combo
-  const comboSelect = document.getElementById('combo-select');
-  if (comboSelect) comboSelect.value = '';
-  const comboOptions = document.getElementById('combo-options');
-  if (comboOptions) comboOptions.style.display = 'none';
-  document.querySelectorAll('.drink-checkbox, .popcorn-checkbox').forEach(cb => cb.checked = false);
-
-  // Reset form khách hàng
+  // Reset form thông tin khách hàng
   const form = document.getElementById('create-ticket-form');
   if (form) form.reset();
+
+
+  if (softReset) {
+    // Cập nhật lại giao diện sơ đồ ghế để biến ghế vừa chọn thành ghế đã đặt
+    if (typeof renderSeatMap === 'function') {
+      renderSeatMap();
+    } else if (typeof renderSeats === 'function') {
+      renderSeats();
+    }
+    return;
+  }
+
+  // NẾU HARD RESET (Khôi phục toàn bộ về ban đầu):
+  state.selectedMovie = null;
+  state.selectedShowtime = null;
+  state.seatLayout = null;
+  state.occupiedSeats = [];
+  state.occupiedDetails = {};
+
+  const roomSelect = document.getElementById('room-filter');
+  if (roomSelect) roomSelect.value = '';
+
+  const showtimeSection = document.getElementById('showtime-section');
+  if (showtimeSection) showtimeSection.style.display = 'none';
+  const showtimeList = document.getElementById('showtime-list');
+  if (showtimeList) showtimeList.innerHTML = '';
+
+  const checkoutSection = document.getElementById('checkout-section');
+  if (checkoutSection) checkoutSection.style.display = 'none';
+
+  const mapArea = document.getElementById('seat-map-area');
+  if (mapArea) mapArea.style.display = 'none';
+  const placeholder = document.getElementById('map-placeholder');
+  if (placeholder) placeholder.style.display = 'block';
 }
 
 async function createTicket(e) {
@@ -972,8 +981,48 @@ async function createTicket(e) {
       ? response.totalAmount
       : grandTotal;
 
-    const ticketDetailsList = response.tickets && response.tickets.length > 0
-      ? response.tickets.map(t => `<b>${t.seatCode || t.seatNumber}</b>: <span style="color:#7c3aed;">${t.ticketCode || t.id}</span>`).join('<br>')
+    const tickets = response.tickets || [];
+
+    // Tự động tìm Mã đơn từ các tên trường khác nhau của response
+    const bookingCode = response.bookingCode
+      || response.code
+      || response.bookingId
+      || response.id
+      || (tickets[0] && (tickets[0].bookingCode || tickets[0].bookingId))
+      || 'N/A';
+
+    // Lưu thông tin chi tiết vào state để hiển thị ngay khi click vào ghế
+    state.selectedSeats.forEach(seatId => {
+      const seatStr = String(seatId);
+      const ticketInfo = tickets.find(t => (t.seatCode || t.seatNumber) === seatStr) || {};
+      const isVip = vipSeatsSet.has(seatStr.toUpperCase());
+      const unitPrice = isVip ? vipPrice : regPrice;
+
+      const ticketCode = ticketInfo.ticketCode
+        || ticketInfo.code
+        || ticketInfo.id
+        || ticketInfo.ticketId
+        || bookingCode;
+
+      state.occupiedDetails[seatStr] = {
+        ticketCode: ticketCode,
+        bookingCode: bookingCode,
+        customerName: name,
+        customerPhone: phone || 'N/A',
+        seatType: isVip ? 'VIP' : 'NORMAL',
+        ticketPrice: ticketInfo.price || unitPrice,
+        comboName: state.selectedCombo ? state.selectedCombo.name : 'Không',
+        comboPrice: comboTotal,
+        totalAmount: finalAmount
+      };
+
+      if (!state.occupiedSeats.includes(seatStr)) {
+        state.occupiedSeats.push(seatStr);
+      }
+    });
+
+    const ticketDetailsList = tickets.length > 0
+      ? tickets.map(t => `<b>${t.seatCode || t.seatNumber}</b>: <span style="color:#7c3aed;">${t.ticketCode || t.code || t.id}</span>`).join('<br>')
       : (response.seats || state.selectedSeats).map(s => `<b>${s}</b>`).join(', ');
 
     const comboDetailInfo = state.selectedCombo ? `
@@ -997,7 +1046,7 @@ async function createTicket(e) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; border-top: 1px dashed #ccc; padding-top: 10px;">
           <div>
             <span style="color: #64748b; font-size: 0.8rem;">Mã đơn (Booking Code)</span>
-            <div style="font-weight: bold; color: #2563eb; font-size: 1.1rem;">${response.bookingCode || 'N/A'}</div>
+            <div style="font-weight: bold; color: #2563eb; font-size: 1.1rem;">${bookingCode}</div>
           </div>
           <div>
             <span style="color: #64748b; font-size: 0.8rem;">Khách hàng</span>
@@ -1039,13 +1088,13 @@ async function createTicket(e) {
 
     showAppModal('Thông Báo Đặt Vé', printHtml, true);
 
-    // Reset toàn bộ về trạng thái ban đầu, như lúc chưa chọn gì
-    resetBookingFlow();
+    // Reset giao diện bán vé nhưng giữ nguyên sơ đồ ghế vừa bán
+    resetBookingFlow(true);
 
   } catch (err) {
     showAppModal('Thất bại', err.message || 'Không thể tạo đơn hàng.');
   }
- }
+}
 
 async function checkTicket() {
   const codeInput = document.getElementById('ticket-code');
@@ -1125,7 +1174,7 @@ function locateAndHighlightSeat(seatMapData, seatCode, ticketResult) {
   };
 
   state.seatLayout = seatMapData;
-  state.selectedSeats = []; // không tính vào giỏ đặt vé, chỉ để xem
+  state.selectedSeats = [];
   state.occupiedSeats = [...(seatMapData.soldSeats || []), ...(seatMapData.holdingSeats || [])];
   state.occupiedDetails = {};
 
@@ -1145,6 +1194,6 @@ function locateAndHighlightSeat(seatMapData, seatCode, ticketResult) {
 
   renderSeatMap(false); // false = không cho phép bấm chọn ghế mới trong chế độ xem này
 
-  // Cuộn tới khu vực sơ đồ để nhân viên thấy ngay
+
   document.getElementById('seat-map-area')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
