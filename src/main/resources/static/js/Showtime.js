@@ -713,42 +713,37 @@ function isShowtimeCompleted(slot) {
     return showEndDateTime < now;
 }
 
-// Render Card Suất Chiếu chuẩn
+
+// Hàm chuyển hướng sang trang chi tiết suất chiếu
+function goToShowtimeDetail(showtimeId) {
+    if (!showtimeId) return;
+    window.location.href = `/showtimedetail?id=${showtimeId}`;
+}
+
 function renderShowtimeCards() {
     const container = document.getElementById('cards-display-container');
     const filterValue = document.getElementById('statusFilter')?.value || 'ALL';
-    const dateFilterValue = document.getElementById('dateFilter')?.value; // Lấy ngày chiếu được chọn
+    const dateFilterValue = document.getElementById('dateFilter')?.value;
 
     if (!container) return;
-
     container.innerHTML = "";
 
     // 1. LỌC DANH SÁCH THEO NGÀY & TRẠNG THÁI
     const filteredList = showtimesDatabase.filter(slot => {
         const slotDate = slot.showDate || slot.date;
+        if (dateFilterValue && slotDate !== dateFilterValue) return false;
 
-        // Lọc theo Ngày chọn (Nếu ô ngày có giá trị)
-        if (dateFilterValue && slotDate !== dateFilterValue) {
-            return false;
-        }
-
-        // Lọc theo Trạng thái
         const isCompleted = isShowtimeCompleted(slot);
         const isHidden = Boolean(slot.isHidden) || slot.status === 'HIDDEN';
 
-        if (filterValue === 'ASSIGNED') {
-            return !isCompleted && !isHidden;
-        } else if (filterValue === 'HIDDEN') {
-            return isHidden;
-        } else if (filterValue === 'COMPLETED') {
-            return isCompleted && !isHidden;
-        }
+        if (filterValue === 'ASSIGNED') return !isCompleted && !isHidden;
+        if (filterValue === 'HIDDEN') return isHidden;
+        if (filterValue === 'COMPLETED') return isCompleted && !isHidden;
 
-        // Mặc định 'ALL': Lấy tất cả theo ngày đã chọn
         return true;
     });
 
-    // 2. SẮP XẾP SUẤT CHIẾU THEO GIỜ CHIẾU (Tăng dần từ sáng -> tối)
+    // 2. SẮP XẾP SUẤT CHIẾU THEO GIỜ CHIẾU
     filteredList.sort((a, b) => {
         const timeA = a.startTime || a.time || "00:00";
         const timeB = b.startTime || b.time || "00:00";
@@ -771,53 +766,42 @@ function renderShowtimeCards() {
         const isCompleted = isShowtimeCompleted(slot);
         const isHidden = Boolean(slot.isHidden) || slot.status === 'HIDDEN';
 
-        // Tên phim, Thời lượng & Ảnh Poster
-        let movieName = "Phim chưa đặt tên";
-        let durationDisplay = slot.duration || 0;
-        let posterUrl = slot.posterUrl || slot.moviePoster || '';
+        // Thông tin Phim
+        const movieName = slot.movie?.title || slot.movie?.tenPhim || slot.movieTitle || "Phim chưa đặt tên";
+        const durationDisplay = slot.movie?.duration || slot.movie?.thoiLuong || slot.duration || 0;
+        const posterUrl = slot.movie?.posterUrl || slot.movie?.hinhAnh || slot.posterUrl || '';
 
-        if (typeof slot.movie === 'object' && slot.movie !== null) {
-            movieName = slot.movie.tenPhim || slot.movie.title || slot.movie.name || movieName;
-            durationDisplay = slot.movie.thoiLuong || slot.movie.duration || durationDisplay;
-            posterUrl = posterUrl || slot.movie.hinhAnh || slot.movie.posterUrl || slot.movie.poster || slot.movie.image || slot.movie.imageUrl || '';
-        } else if (typeof slot.movieTitle === 'string') {
-            movieName = slot.movieTitle;
-        }
+        // Thông tin Phòng chiếu
+        const roomName = slot.room?.tenPhong || slot.roomName || "Phòng chiếu";
 
-        // Tên phòng chiếu & Tổng số ghế
-        let roomName = "Phòng chiếu";
-        let totalSeats = slot.totalSeats || slot.screeningRoom?.tongSoGhe || slot.room?.tongSoGhe || 50;
+        // TÍNH TỔNG SỐ GHẾ (Lấy từ soLuongGheThuong + soLuongGheVip trong CSDL)
+        const gheThuong = Number(slot.room?.soLuongGheThuong || 0);
+        const gheVip = Number(slot.room?.soLuongGheVip || 0);
+        const totalSeats = (gheThuong + gheVip) || slot.totalSeats || slot.room?.tongSoGhe || 18;
 
-        if (typeof slot.room === 'object' && slot.room !== null) {
-            roomName = slot.room.tenPhong || slot.room.name || roomName;
-            if (slot.room.tongSoGhe) totalSeats = slot.room.tongSoGhe;
-        } else if (typeof slot.roomName === 'string') {
-            roomName = slot.roomName;
-        }
+        // ĐẾM SỐ VÉ ĐÃ BÁN (Lấy từ ticketsSold / soVeDaBan từ Backend)
+        let ticketsSold = 0;
+        if (typeof slot.ticketsSold === 'number') ticketsSold = slot.ticketsSold;
+        else if (typeof slot.soVeDaBan === 'number') ticketsSold = slot.soVeDaBan;
+        else if (Array.isArray(slot.tickets)) ticketsSold = slot.tickets.length;
 
-        const ticketsSold = slot.ticketsSold || slot.soVeDaBan || 0;
-
-        // Render Combo Badges
+        // Combo Badges
         let comboBadgesHtml = "";
-        if (slot.combos && Array.isArray(slot.combos)) {
+        if (Array.isArray(slot.combos)) {
             slot.combos.forEach(c => {
                 comboBadgesHtml += `<span class="badge-combo-tag">${c.tenCombo || c.name}</span> `;
-            });
-        } else if (slot.comboNames && Array.isArray(slot.comboNames)) {
-            slot.comboNames.forEach(name => {
-                comboBadgesHtml += `<span class="badge-combo-tag">${name}</span> `;
             });
         }
 
         // Giá vé & Thời gian
         const regPrice = slot.regularPrice ? slot.regularPrice.toLocaleString('vi-VN') : '0';
-        const vipPercent = slot.vipPercent || 20;
+        const vipPercent = slot.vipPercent || 0;
 
-        let rawTime = slot.startTime || slot.time || "00:00";
+        const rawTime = slot.startTime || slot.time || "00:00";
         const timeDisplay = formatTimeToAMPM(rawTime);
-        const dateDisplay = formatDate(slot.showDate || slot.date || "2026-07-25");
+        const dateDisplay = formatDate(slot.showDate || slot.date || "2026-08-06");
 
-        // Badge Trạng thái & Style Card
+        // Badge Trạng thái
         let statusBadgeHtml = `<span class="badge bg-success px-2.5 py-1.5 fs-7"><i class="fa-solid fa-circle-check me-1"></i>Đã thiết lập vé</span>`;
         let cardExtraClass = "";
 
@@ -831,7 +815,9 @@ function renderShowtimeCards() {
 
         const cardHTML = `
             <div class="col-12 mb-3" id="showtime-card-${slot.id}">
-                <div class="showtime-card-v2 ${cardExtraClass} p-3">
+                <div class="showtime-card-v2 ${cardExtraClass} p-3"
+                     style="cursor: pointer;"
+                     onclick="goToShowtimeDetail('${slot.id}')">
                     <div class="row align-items-center g-3">
 
                         <!-- KHUNG POSTER -->
@@ -864,8 +850,10 @@ function renderShowtimeCards() {
                                 <i class="fa-solid fa-door-open text-muted me-1"></i>Vị trí phòng: <strong>${roomName}</strong>
                             </div>
 
+                            <!-- HIỂN THỊ ĐỘNG SỐ VÉ ĐÃ BÁN / TỔNG SỐ GHẾ PHÒNG -->
                             <div class="ticket-status-text mb-1">
-                                <i class="fa-solid fa-ticket me-1"></i>Tình trạng vé: ${ticketsSold}/${totalSeats} ghế
+                                <i class="fa-solid fa-ticket me-1 text-primary"></i>Tình trạng vé:
+                                <strong class="${ticketsSold > 0 ? 'text-primary' : 'text-dark'}">${ticketsSold}/${totalSeats}</strong> ghế
                             </div>
 
                             <div class="small text-muted">
@@ -874,14 +862,14 @@ function renderShowtimeCards() {
                         </div>
 
                         <!-- CỘT NÚT THAO TÁC -->
-                        <div class="col-md-3 col-lg-3 text-md-end d-flex gap-2 justify-content-md-end align-items-center ms-auto">
-                            <button class="btn btn-light text-secondary border btn-sm px-3 fw-semibold" onclick="toggleHideShowtime('${slot.id}')">
+                        <div class="col-md-3 col-lg-3 text-md-end d-flex gap-2 justify-content-md-end align-items-center ms-auto" onclick="event.stopPropagation();">
+                            <button class="btn btn-light text-secondary border btn-sm px-3 fw-semibold" onclick="event.stopPropagation(); toggleHideShowtime('${slot.id}')">
                                 <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'} me-1"></i>${isHidden ? 'Hiện' : 'Ẩn'}
                             </button>
-                            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" ${isCompleted ? 'disabled' : ''} data-bs-toggle="modal" data-bs-target="#unifiedShowtimeModal" onclick="onOpenShowtimeModal('${slot.id}')">
+                            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" ${isCompleted ? 'disabled' : ''} data-bs-toggle="modal" data-bs-target="#unifiedShowtimeModal" onclick="event.stopPropagation(); onOpenShowtimeModal('${slot.id}')">
                                 <i class="fa-solid fa-pen-to-square me-1"></i>Sửa
                             </button>
-                            <button class="btn btn-outline-danger btn-sm px-3 fw-semibold" onclick="deleteShowtime('${slot.id}')">
+                            <button class="btn btn-outline-danger btn-sm px-3 fw-semibold" onclick="event.stopPropagation(); deleteShowtime('${slot.id}')">
                                 <i class="fa-solid fa-trash me-1"></i>Xóa
                             </button>
                         </div>

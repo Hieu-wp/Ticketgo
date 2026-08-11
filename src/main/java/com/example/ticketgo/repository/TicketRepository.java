@@ -18,7 +18,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     // 2. Lấy toàn bộ vé thuộc một suất chiếu
     List<Ticket> findByShowtimeId(String showtimeId);
-
+    int countByShowtimeId(String showtimeId);
     // 3. Xóa tất cả vé theo showtimeId
     void deleteByShowtimeId(String showtimeId);
 

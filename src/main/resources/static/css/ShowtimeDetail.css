@@ -1,0 +1,356 @@
+:root {
+            --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --neon-purple: #a855f7;
+            --dark-purple: #1e1b4b;
+            --light-bg: #f8fafc;
+            --card-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-bg);
+            color: #1e293b;
+            padding-bottom: 40px;
+        }
+
+        /* Top Navigation Bar */
+        .top-navbar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 30px;
+            margin-bottom: 25px;
+        }
+
+        /* Nút Quay Lại Được Phối Màu Đẹp */
+        .btn-back {
+            background: rgba(168, 85, 247, 0.1);
+            color: #7c3aed;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            font-weight: 600;
+            transition: all 0.25s ease;
+        }
+
+        .btn-back:hover {
+            background: var(--purple-radiant);
+            color: #ffffff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+            transform: translateX(-2px);
+        }
+
+        /* STYLE INPUT MẤT VIỀN & MẤT OUTLINE KHỔNG NỔI BÓNG KHANH CLICK */
+        .line-input-group {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .line-input-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4f46e5; /* Thêm màu chữ tím Indigo cho label */
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .line-input {
+            border: none !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            border-radius: 0 !important;
+            background-color: transparent !important;
+            padding: 4px 0 !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            font-size: 0.95rem;
+            width: 100%;
+            outline: none !important; /* Xóa viền tím/xanh mặc định khi click */
+            box-shadow: none !important; /* Xóa bóng đổ viền xám mặc định */
+        }
+
+        .line-input:focus, .line-input:active {
+            outline: none !important;
+            box-shadow: none !important;
+            border-bottom-color: var(--neon-purple) !important;
+        }
+
+        .line-input[readonly] {
+            cursor: default;
+        }
+
+        /* KHUNG SƠ ĐỒ PHÒNG CHIẾU (NỀN TRẮNG) */
+        .cinema-hall-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Màn hình chiếu thu nhỏ */
+        .screen-container {
+            perspective: 300px;
+            margin-bottom: 22px;
+            text-align: center;
+        }
+
+        .screen {
+            background: linear-gradient(to bottom, #a855f7, rgba(168, 85, 247, 0.05));
+            height: 8px;
+            width: 65%;
+            margin: 0 auto 6px auto;
+            border-radius: 50% 50% 0 0 / 10px 10px 0 0;
+            box-shadow: 0 -4px 12px rgba(168, 85, 247, 0.4);
+        }
+
+        .screen-text {
+            color: #94a3b8;
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        /* Legend Chú Thích */
+        .seat-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 8px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .legend-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+        }
+
+        /* Lưới Ghế Ngồi Thu Nhỏ */
+        .seating-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            overflow-x: auto;
+            padding: 5px 0;
+        }
+
+        .seat-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .row-label {
+            width: 20px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        /* Ghế thu nhỏ */
+        .seat {
+            width: 30px;
+            height: 28px;
+            border-radius: 6px 6px 3px 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+
+        /* 1. Ghế thường trống */
+        .seat.available-normal {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        /* 2. Ghế VIP trống (MÀU VÀNG) */
+        .seat.available-vip {
+            background: #facc15;
+            color: #713f12;
+            border: 1px solid #eab308;
+        }
+
+        /* 3. Ghế đã bán (DẤU TÍCH MÀU TÍM) */
+        .seat.sold {
+            background: #f3e8ff;
+            border: 1px solid #d8b4fe;
+            color: #a855f7;
+            font-size: 0.85rem;
+        }
+
+        /* CARD BÁO CÁO THU NHỎ KÍCH THƯỚC */
+        .stat-card-sm {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            padding: 14px 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-icon-sm {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        /* --- KHUNG CHỮA SƠ ĐỒ GHẾ --- */
+        .cinema-hall-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        /* --- MÀN HÌNH CHIẾU CONG & PHÁT SÁNG --- */
+        .screen-container {
+            text-align: center;
+            margin-bottom: 35px;
+            position: relative;
+        }
+
+        .screen {
+            height: 18px;
+            width: 65%;
+            margin: 0 auto 12px auto;
+            background: linear-gradient(180deg, #e0e7ff 0%, #ffffff 100%);
+            border-top: 3px solid #6366f1;
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+            box-shadow: 0 12px 20px -6px rgba(99, 102, 241, 0.35);
+        }
+
+        .screen-text {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        /* --- ĐỊNH DẠNG TỪNG Ô GHẾ --- */
+        .seat-btn {
+            width: 48px !important;
+            height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            user-select: none;
+            transition: all 0.15s ease-in-out;
+            border: none;
+        }
+
+        /* 1. Ghế Thường (Xám nhạt - viền viền xanh xám) */
+        .seat-btn.available-normal, .legend-box-sample.normal {
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        /* 2. Ghế VIP (Cam) */
+        .seat-btn.available-vip, .legend-box-sample.vip {
+            background-color: #f59e0b !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* 3. Ghế Đã chọn / Đã mua (Xanh lá - Mint Green) */
+        .seat-btn.sold, .seat-btn.selected, .legend-box-sample.sold {
+            background-color: #6ee7b7 !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* 4. Ghế Đặt trước (Xanh dương) */
+        .seat-btn.reserved, .legend-box-sample.reserved {
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* Khoảng trống lối đi ở giữa */
+        .aisle-space {
+            width: 28px;
+            height: 42px;
+        }
+
+        /* --- CHÚ THÍCH (DƯỚI CÙNG) --- */
+        .seat-legend {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-top: 35px;
+            padding-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .legend-box-sample {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+        }
+        /* Styling cho Tooltip Hover ghế */
+        .seat-hover-tooltip {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+            border: 1px solid #334155;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out;
+            max-width: 280px;
+        }
+
+        .seat-hover-tooltip.active {
+            display: block;
+            opacity: 1;
+        }

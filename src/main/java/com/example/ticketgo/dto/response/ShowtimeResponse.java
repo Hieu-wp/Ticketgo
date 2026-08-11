@@ -1,10 +1,8 @@
 package com.example.ticketgo.dto.response;
 
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-
 
 public record ShowtimeResponse (
         String id,
@@ -17,5 +15,6 @@ public record ShowtimeResponse (
         Double vipPercent,
         Double vipPrice,
         String status,
-        List<ComboResponse> combos
-    ) {}
+        List<ComboResponse> combos,
+        Integer ticketsSold
+) {}

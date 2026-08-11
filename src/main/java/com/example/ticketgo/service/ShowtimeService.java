@@ -13,6 +13,7 @@ import com.example.ticketgo.repository.ComboRepository;
 import com.example.ticketgo.repository.FilmRepository;
 import com.example.ticketgo.repository.ScreeningRoomRepository;
 import com.example.ticketgo.repository.ShowtimeRepository;
+import com.example.ticketgo.repository.TicketRepository; // 1. IMPORT TICKET REPOSITORY
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class ShowtimeService {
     private final ScreeningRoomRepository roomRepository;
     private final ComboRepository comboRepository;
     private final ComboService comboService;
+    private final TicketRepository ticketRepository; // 2. INJECT TICKET REPOSITORY
 
 
     // 1. CHỨC NĂNG THÊM MỚI
@@ -39,7 +41,7 @@ public class ShowtimeService {
     @Transactional
     public List<ShowtimeResponse> createShowtimes(ShowtimeCreateRequest request) {
         LocalDate today = LocalDate.now();
-        LocalTime timeLimit = LocalTime.now().plusHours(1); // Mốc thời gian: Hiện tại + 1 giờ
+        LocalTime timeLimit = LocalTime.now().plusHours(1);
 
         Film movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim!"));
@@ -49,7 +51,6 @@ public class ShowtimeService {
 
         validatePrices(request.getRegularPrice(), request.getVipPercent());
 
-        // Xử lý danh sách ngày
         List<LocalDate> datesToSchedule = new ArrayList<>();
         if (Boolean.TRUE.equals(request.getIsRepeat())) {
             if (request.getStartDate() == null || request.getEndDate() == null) {
@@ -81,21 +82,17 @@ public class ShowtimeService {
         for (LocalDate showDate : datesToSchedule) {
             for (LocalTime startTime : request.getStartTimes()) {
 
-                // KIỂM TRA ĐIỀU KIỆN GIỜ CHIẾU VỚI NGÀY HÔM NAY (Phải > Hiện tại + 1 tiếng)
                 if (showDate.isEqual(today) && !startTime.isAfter(timeLimit)) {
                     if (Boolean.TRUE.equals(request.getIsRepeat())) {
-                        // Trường hợp LẶP: Ghi nhận vết lỗi để hỏi xác nhận
                         invalidTimeMessages.add(String.format("%s ngày %s", startTime, showDate));
                         continue;
                     } else {
-                        // Trường hợp ĐƠN LẺ: Bắn lỗi ngay lập tức
                         throw new InvalidInputException("Thời gian chiếu đã qua, vui lòng chọn thời gian khác!");
                     }
                 }
 
                 LocalTime endTime = startTime.plusMinutes(movie.getDuration());
 
-                // Kiểm tra trùng lịch
                 if (showtimeRepository.existsOverlappingShowtime(room.getId(), showDate, startTime, endTime)) {
                     throw new InvalidInputException(String.format(
                             "Phòng '%s' đã có suất chiếu trùng khung giờ %s - %s ngày %s!",
@@ -118,7 +115,6 @@ public class ShowtimeService {
             }
         }
 
-        // BẮT CỜ XÁC NHẬN CHO TRƯỜNG HỢP LẶP LỊCH
         if (!invalidTimeMessages.isEmpty()) {
             if (!Boolean.TRUE.equals(request.getIsConfirmSkipInvalid())) {
                 String errorMsg = "Thời gian suất chiếu " + String.join(", ", invalidTimeMessages) +
@@ -131,14 +127,12 @@ public class ShowtimeService {
             throw new InvalidInputException("Không có suất chiếu nào hợp lệ để tạo!");
         }
 
-        // Tối ưu lưu hàng loạt
         List<Showtime> createdList = showtimeRepository.saveAll(validShowtimesToCreate);
         return createdList.stream().map(this::mapToResponse).toList();
     }
 
-    // =========================================================================
-    // 2. CHỨC NĂNG LOAD DỮ LIỆU LÊN CARD (Lấy danh sách / Chi tiết)
-    // =========================================================================
+    // 2. CHỨC NĂNG LOAD DỮ LIỆU LÊN CARD
+
     @Transactional(readOnly = true)
     public List<ShowtimeResponse> getAllShowtimes(String status) {
         List<Showtime> list;
@@ -150,7 +144,6 @@ public class ShowtimeService {
         return list.stream().map(this::mapToResponse).toList();
     }
 
-    // Dành riêng cho APP KHÁCH HÀNG: Chỉ lấy các suất chiếu không bị ẨN
     @Transactional(readOnly = true)
     public List<ShowtimeResponse> getCustomerShowtimes() {
         return showtimeRepository.findByStatusNot("HIDDEN")
@@ -181,7 +174,6 @@ public class ShowtimeService {
             throw new InvalidInputException("Ngày chiếu không được ở quá khứ!");
         }
 
-        // KIỂM TRA ĐIỀU KIỆN GIỜ CHIẾU KHI SỬA THÀNH NGÀY HÔM NAY
         if (request.getShowDate().isEqual(today) && !request.getStartTime().isAfter(timeLimit)) {
             throw new InvalidInputException("Thời gian chiếu đã qua, vui lòng chọn thời gian khác!");
         }
@@ -196,7 +188,6 @@ public class ShowtimeService {
 
         LocalTime endTime = request.getStartTime().plusMinutes(movie.getDuration());
 
-        // Kiểm tra trùng lịch (loại trừ chính suất chiếu đang sửa)
         boolean isOverlapped = showtimeRepository.existsOverlappingShowtimeExcludingId(
                 room.getId(), request.getShowDate(), request.getStartTime(), endTime, id
         );
@@ -207,7 +198,6 @@ public class ShowtimeService {
                     request.getStartTime(), endTime, request.getShowDate(), room.getTenPhong()));
         }
 
-        // Cập nhật thông tin
         showtime.setMovie(movie);
         showtime.setRoom(room);
         showtime.setShowDate(request.getShowDate());
@@ -226,9 +216,8 @@ public class ShowtimeService {
         return mapToResponse(updated);
     }
 
-    // =========================================================================
     // 4. CHỨC NĂNG XÓA SUẤT CHIẾU
-    // =========================================================================
+
     @Transactional
     public void deleteShowtime(String id) {
         if (!showtimeRepository.existsById(id)) {
@@ -237,15 +226,13 @@ public class ShowtimeService {
         showtimeRepository.deleteById(id);
     }
 
-    // =========================================================================
-    // 5. CHỨC NĂNG ẨN / HIỆN SUẤT CHIẾU (Ẩn khỏi App Khách Hàng)
-    // =========================================================================
+    // 5. CHỨC NĂNG ẨN / HIỆN SUẤT CHIẾU
+
     @Transactional
     public ShowtimeResponse toggleHideShowtime(String id) {
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu ID: " + id));
 
-        // Nút toggle: Nếu đang HIDDEN thì mở lại ASSIGNED, ngược lại thì chuyển sang HIDDEN
         if ("HIDDEN".equalsIgnoreCase(showtime.getStatus())) {
             showtime.setStatus("ASSIGNED");
         } else {
@@ -256,9 +243,8 @@ public class ShowtimeService {
         return mapToResponse(updated);
     }
 
-    // =========================================================================
     // HELPER METHODS
-    // =========================================================================
+
     private void validatePrices(Double regularPrice, Double vipPercent) {
         if (regularPrice == null || regularPrice <= 0) {
             throw new InvalidInputException("Đơn giá vé ghế thường phải > 0 VNĐ");
@@ -296,11 +282,15 @@ public class ShowtimeService {
                 ? showtime.getCombos().stream().map(comboService::mapToResponse).toList()
                 : Collections.emptyList();
 
+        // 3. TÍNH SỐ VÉ ĐÃ BÁN CỦA SUẤT CHIẾU
+        int ticketsSold = ticketRepository.countByShowtimeId(showtime.getId());
+
         return new ShowtimeResponse(
                 showtime.getId(), movieRecord, roomRecord, showtime.getShowDate(),
                 showtime.getStartTime(), showtime.getEndTime(), showtime.getRegularPrice(),
                 showtime.getVipPercent(), showtime.getVipPrice(), showtime.getStatus(),
-                comboResponses
+                comboResponses,
+                ticketsSold // 4. TRUYỀN TICKETS_SOLD VÀO RECORD RESPONSE
         );
     }
 }
