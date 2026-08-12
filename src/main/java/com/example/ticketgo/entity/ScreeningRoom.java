@@ -39,6 +39,9 @@ public class ScreeningRoom {
     private Boolean coLoiDi;
     @Column(name = "tong_so_ghe", nullable = false)
     private Integer tongSoGhe;
+    @Column(name = "trang_thai", nullable = false)
+    private String trangThai;
+
     @PrePersist
     @PreUpdate
     public void calculateTongSoGhe() {

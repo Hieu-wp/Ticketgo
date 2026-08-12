@@ -7,6 +7,17 @@ let systemProducts = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
+
+    // Bắt sự kiện người dùng chọn phòng chiếu bảo trì trên tất cả các thẻ select động
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('dynamic-room-select')) {
+            const selectedOpt = e.target.options[e.target.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.maintenance === 'true') {
+                customAlert('Phòng chiếu này đang trong quá trình bảo trì, không thể xếp lịch!', 'Phòng đang bảo trì', 'orange');
+                e.target.value = '';
+            }
+        }
+    });
 });
 
 // Khởi tạo ứng dụng
@@ -261,10 +272,14 @@ function generateShowtimeInputs() {
         return;
     }
 
+    // --- CẬP NHẬT LOGIC PHÒNG BẢO TRÌ TẠI ĐÂY ---
     let roomOptionsHtml = `<option value="" selected disabled>Chọn phòng</option>`;
     systemRooms.forEach(r => {
-        const rName = r.tenPhong || r.name || `Phòng ${r.id}`;
-        roomOptionsHtml += `<option value="${r.id}">${rName}</option>`;
+        const isMaintenance = r.trangThai === 'BAO_TRI' || r.trangThai === 'Đang bảo trì';
+        const rName = (r.tenPhong || r.name || `Phòng ${r.id}`) + (isMaintenance ? ' (Đang bảo trì)' : '');
+        const disabledAttr = isMaintenance ? 'disabled' : '';
+
+        roomOptionsHtml += `<option value="${r.id}" ${disabledAttr} data-maintenance="${isMaintenance}">${rName}</option>`;
     });
 
     let slotsHtml = "";
@@ -395,16 +410,20 @@ function populateModalForEdit(id) {
     calculateVipPricePreview();
 
     // Fill thông tin Ca chiếu & Phòng chiếu
-    const container = document.getElementById('dynamic-slots-container');
-    if (container) {
-        let roomOptionsHtml = `<option value="" disabled>Chọn phòng</option>`;
-        const currentRoomId = typeof slot.room === 'object' ? slot.room?.id : (slot.roomId || slot.room);
+        const container = document.getElementById('dynamic-slots-container');
+        if (container) {
+            let roomOptionsHtml = `<option value="" disabled>Chọn phòng</option>`;
+            const currentRoomId = typeof slot.room === 'object' ? slot.room?.id : (slot.roomId || slot.room);
 
-        systemRooms.forEach(r => {
-            const rName = r.tenPhong || r.name || `Phòng ${r.id}`;
-            const isSelected = String(r.id) === String(currentRoomId) ? 'selected' : '';
-            roomOptionsHtml += `<option value="${r.id}" ${isSelected}>${rName}</option>`;
-        });
+            systemRooms.forEach(r => {
+                const isMaintenance = r.trangThai === 'BAO_TRI' || r.trangThai === 'Đang bảo trì';
+                const rName = (r.tenPhong || r.name || `Phòng ${r.id}`) + (isMaintenance ? ' (Đang bảo trì)' : '');
+                const isSelected = String(r.id) === String(currentRoomId) ? 'selected' : '';
+                const disabledAttr = isMaintenance ? 'disabled' : '';
+
+                roomOptionsHtml += `<option value="${r.id}" ${isSelected} ${disabledAttr} data-maintenance="${isMaintenance}">${rName}</option>`;
+            });
+
 
         const startTimeVal = (slot.startTime || slot.time || '').substring(0, 5);
 

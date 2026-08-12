@@ -1,7 +1,9 @@
 package com.example.ticketgo.controller;
 
+import com.example.ticketgo.dto.request.RequestMaintenance;
 import com.example.ticketgo.dto.request.RequestScreeningRoom;
 import com.example.ticketgo.dto.response.ResponseScreeningRoom;
+import com.example.ticketgo.service.MaintenanceHistoryService;
 import com.example.ticketgo.service.ScreeningRoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.List;
 public class ScreeningRoom {
 
     private final ScreeningRoomService screeningRoomService;
+    private final MaintenanceHistoryService maintenanceHistoryService;
 
     // Trả về giao diện HTML của trang quản lý phòng chiếu
     @GetMapping("/view")
@@ -63,5 +66,28 @@ public class ScreeningRoom {
     public ResponseEntity<Void> deleteRoom(@PathVariable String id) {
         screeningRoomService.deleteScreeningRoom(id);
         return ResponseEntity.noContent().build();
+    }
+
+
+    @PostMapping("/api/{roomId}/maintenance")
+    @ResponseBody
+    public ResponseEntity<?> addMaintenanceRecord(
+            @PathVariable String roomId,
+            @RequestBody RequestMaintenance request) {
+        try {
+            maintenanceHistoryService.handleMaintenance(roomId, request);
+            return ResponseEntity.ok().body("{\"message\": \"Cập nhật trạng thái bảo trì thành công\"}");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"message\": \"" + e.getMessage() + "\"}");
+        }
+    }
+    @GetMapping("/api/maintenance-history/active")
+    @ResponseBody
+    public ResponseEntity<?> getActiveMaintenance(@RequestParam String roomId) {
+        try {
+            return ResponseEntity.ok(maintenanceHistoryService.getActiveMaintenanceByRoomId(roomId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"message\":\"" + e.getMessage() + "\"}");
+        }
     }
 }

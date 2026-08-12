@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử bảo trì</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/MaintenanceHistory.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
+        <hr class="text-secondary mx-3 my-2">
+        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link acitve"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
+        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="/customers" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="/admin/ticket-desk" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+        <a href="/analytics" class="nav-link"><i class="fa-solid fa-ticket"></i> Thống kê doanh số</a>
+    </div>
+</div>
+
+
+<div class="main-content">
+    <!-- Header trang lịch sử -->
+    <div class="mb-4">
+        <a href="/view" class="btn-history mb-3 d-inline-flex text-decoration-none">
+            <i class="fa-solid fa-arrow-left me-2"></i>
+            <span>Quay lại trang quản lý</span>
+        </a>
+
+        <div>
+            <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Lịch Sử Bảo Trì
+            </h3>
+            <p class="text-muted mb-0" id="roomFilterText">Tất cả phòng chiếu</p>
+        </div>
+    </div>
+
+    <!-- Bộ Lọc Tìm Kiếm -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-semibold" for="filterRoom">Phòng chiếu</label>
+                    <select class="form-select" id="filterRoom" name="filterRoom">
+                        <option value="">Tất cả phòng</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-semibold" for="filterStatus">Trạng thái</label>
+                    <select class="form-select" id="filterStatus" name="filterStatus">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Đang thực hiện">Đang thực hiện</option>
+                        <option value="Hoàn thành"> Đã hoàn thành</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-semibold" for="filterType">Loại bảo trì</label>
+                    <select class="form-select" id="filterType" name="filterType">
+                        <option value="">Tất cả loại</option>
+                        <option value="Định kỳ">Bảo trì định kỳ</option>
+                        <option value="Sửa chữa">Sửa chữa sự cố</option>
+                        <option value="Nâng cấp">Nâng cấp thiết bị</option>
+                        <option value="Vệ sinh">Vệ sinh sâu</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn text-white w-100 fw-semibold" id="btnApplyFilter" onclick="renderHistory()" style="background: var(--purple-radiant); border-radius: 8px;">
+                        <i class="fa-solid fa-filter me-1"></i>Lọc danh sách
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row g-3" id="historyList"></div>
+
+    <!-- Trạng Thái Trống Khi Không Có Dữ Liệu -->
+    <div id="emptyState" class="text-center py-5 d-none">
+        <i class="fa-solid fa-clipboard-list fa-3x text-muted mb-3"></i>
+        <p class="text-muted fs-5 mb-3">Chưa có lịch sử bảo trì nào phù hợp.</p>
+        <a href="/view" class="btn text-white fw-bold px-4 py-2" style="background: var(--purple-radiant); border-radius: 10px;">
+            Quay lại quản lý phòng
+        </a>
+    </div>
+</div>
+
+<!-- Modal Chi Tiết Bảo Trì -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 p-4" style="background: var(--purple-radiant);">
+                <h5 class="modal-title fw-bold text-white">
+                    <i class="fa-solid fa-file-lines me-2"></i>Chi tiết hồ sơ bảo trì
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="detailContent">
+                <!-- JS sẽ render nội dung chi tiết vào đây -->
+            </div>
+            <div class="modal-footer border-0 bg-light p-3">
+                <button type="button" class="btn btn-secondary px-4 fw-semibold" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/MaintenanceHistory.js}"></script>
+</body>
+</html>

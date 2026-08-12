@@ -18,7 +18,6 @@
     <div class="nav flex-column">
         <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
         <hr class="text-secondary mx-3 my-2">
-        <small class="text-uppercase text-muted px-4 mb-2 d-block" style="font-size: 10px; letter-spacing: 1px;">Chức năng quản lý</small>
         <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
         <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
         <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
@@ -35,9 +34,15 @@
         <div>
             <h3 class="fw-bold mb-1" style="background: var(--purple-radiant); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Quản Lý Phòng Chiếu</h3>
         </div>
-        <button class="btn text-white fw-bold px-4 py-2 shadow-sm" style="background: var(--purple-radiant); border-radius: 12px;" data-bs-toggle="modal" data-bs-target="#addRoomModal">
-            <i class="fa-solid fa-plus me-2"></i>Thêm phòng chiếu
-        </button>
+        <div class="d-flex gap-2">
+            <a href="/maintenance_history" class="btn-history">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử bảo trì
+            </a>
+            <button class="btn text-white fw-bold px-4 py-2 shadow-sm" style="background: var(--purple-radiant); border-radius: 12px;" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+                <i class="fa-solid fa-plus me-2"></i>Thêm phòng chiếu
+            </button>
+        </div>
+
     </div>
 
 
@@ -218,6 +223,87 @@
                 <p id="notifyMessage" class="mb-4 text-secondary fs-6">Thông tin đã được cập nhật vào hệ thống.</p>
                 <button type="button" id="notifyConfirmBtn" class="btn btn-primary w-100 rounded-3 fw-semibold py-2 shadow-sm" data-bs-dismiss="modal" style="background-color: #0d6efd; border: none;">Xác nhận</button>
             </div>
+        </div>
+    </div>
+</div>
+<!-- MODAL BẢO TRÌ PHÒNG CHIẾU -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 p-4" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <div>
+                    <h5 class="modal-title fw-bold text-white mb-1">
+                        <i class="fa-solid fa-screwdriver-wrench me-2"></i>Bảo trì Phòng Chiếu
+                    </h5>
+                    <small class="text-white-50" id="maintenanceRoomName">Phòng Chiếu 01</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Đã có id="maintenanceForm" để JS bắt sự kiện submit -->
+            <form id="maintenanceForm">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Ngày bắt đầu bảo trì <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="maintStartDate" name="ngayBatDau" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Ngày kết thúc dự kiến</label>
+                            <input type="datetime-local" class="form-control" id="maintEndDate" name="ngayKetThuc">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Loại bảo trì <span class="text-danger">*</span></label>
+                            <!-- Đã thêm name="loaiBaoTri" -->
+                            <select class="form-select" id="maintType" name="loaiBaoTri" required>
+                                <option value="">-- Chọn loại --</option>
+                                <option value="Định kỳ">Bảo trì định kỳ</option>
+                                <option value="Sửa chữa">Sửa chữa sự cố</option>
+                                <option value="Nâng cấp">Nâng cấp thiết bị</option>
+                                <option value="Vệ sinh">Vệ sinh sâu</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Người thực hiện <span class="text-danger">*</span></label>
+                            <!-- Đã thêm name="nguoiThucHien" -->
+                            <input type="text" class="form-control" id="maintPerson" name="nguoiThucHien" placeholder="Họ tên kỹ thuật viên" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Trạng thái</label>
+
+                            <select class="form-select" id="maintStatus" name="trangThaiHoSo">
+                                <option value="Đang thực hiện" selected>Đang thực hiện</option>
+                                <option value="Hoàn thành">Hoàn thành</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Chi phí ước tính (VNĐ)</label>
+                            <!-- Đã thêm name="chiPhi" -->
+                            <input type="number" class="form-control" id="maintCost" name="chiPhi" placeholder="0" min="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mô tả công việc <span class="text-danger">*</span></label>
+                            <!-- Đã thêm name="moTa" -->
+                            <textarea class="form-control" id="maintDescription" name="moTa" rows="4"
+                                      placeholder="Mô tả chi tiết nội dung bảo trì, thiết bị cần thay thế..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Ghi chú thêm</label>
+                            <!-- Đã thêm name="ghiChu" -->
+                            <textarea class="form-control" id="maintNote" name="ghiChu" rows="2" placeholder="Ghi chú (nếu có)"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-secondary fw-semibold me-2" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn text-white fw-bold px-4" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 10px;">
+                            <i class="fa-solid fa-save me-1"></i>Lưu bảo trì
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>

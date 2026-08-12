@@ -11,6 +11,31 @@ const totalCountDisplay = document.getElementById('totalCount');
 let vipSeats = new Set();
 const API_URL = '/screening-rooms/api';
 
+// Chuyển "HH:mm dd/MM/yyyy" từ Backend sang "YYYY-MM-DDTHH:mm" cho datetime-local
+function formatToDatetimeLocal(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.trim().split(' ');
+    if (parts.length === 2) {
+        const time = parts[0]; // HH:mm
+        const dateParts = parts[1].split('/'); // [dd, MM, yyyy]
+        if (dateParts.length === 3) {
+            return `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}T${time}`;
+        }
+    }
+    return '';
+}
+
+// Lấy giờ hiện tại chuẩn YYYY-MM-DDTHH:mm cho datetime-local
+function getCurrentDatetimeLocal() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 
 //LOGIC VẼ SƠ ĐỒ GHẾ - FORM THÊM MỚI
 function updateStats() {
@@ -216,6 +241,13 @@ document.addEventListener('DOMContentLoaded', function () {
             createScreeningRoom();
         });
     }
+    const maintenanceForm = document.getElementById('maintenanceForm');
+        if (maintenanceForm) {
+            maintenanceForm.addEventListener('submit', function (e) {
+                e.preventDefault(); // Chặn reload trang
+                submitMaintenance();
+            });
+        }
 
     // Sự kiện thay đổi kích thước form Edit
     const editRows = document.getElementById('editrowsInput');
@@ -245,27 +277,38 @@ async function loadScreeningRooms() {
         }
 
         roomList.forEach(room => {
+            const isMaintenance = room.trangThai === 'BAO_TRI';
+            const statusBadge = isMaintenance
+                ? `<span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Đang bảo trì</span>`
+                : `<span class="badge bg-success-subtle text-success">Đang hoạt động</span>`;
+
+            const cardOpacity = isMaintenance ? "opacity: 0.8; filter: grayscale(40%);" : "";
+
             const cardHtml = `
                 <div class="col-xl-4 col-md-6" id="room-card-${room.id}">
-                    <div class="card room-card p-4" style="background: var(--purple-radiant); color: white;">
+                    <div class="card room-card p-4" style="background: var(--purple-radiant); color: white; ${cardOpacity}">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
                                 <h5 class="fw-bold text-dark mb-1">${room.tenPhong}</h5>
-                                <small class="text-white-50">Mã: ${room.id}</small>
+                                ${statusBadge}
                             </div>
                             <div class="text-end">
                                 <span class="fs-4 fw-bold text-dark d-block total-seats-display">${room.tongSoGhe}</span>
                                 <small class="text-white-50">Tổng số ghế</small>
                             </div>
                         </div>
-                        <div class="mb-3 fs-7">
-                            <span class="badge bg-light text-dark me-2 badge-normal">Thường: ${room.soLuongGheThuong}</span>
-                            <span class="badge bg-warning text-dark me-2 badge-vip">VIP: ${room.soLuongGheVip}</span>
-                            <span class="badge bg-info text-dark badge-aisle">${room.coLoiDi ? 'Có lối đi' : 'Không lối đi'}</span>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-light btn-sm text-secondary w-100 fw-semibold" onclick="editScreeningRoom('${room.id}')">Sửa sơ đồ</button>
-                            <button class="btn btn-light btn-sm text-danger fw-semibold" onclick="deleteScreeningRoom('${room.id}')"><i class="fa-solid fa-trash-can"></i></button>
+
+                        <!-- Chặn thao tác khác, chỉ giữ lại nút bấm bảo trì để hoàn tất -->
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-light btn-sm text-secondary w-100 fw-semibold"
+                                    onclick="editScreeningRoom('${room.id}')" ${isMaintenance ? 'disabled' : ''}>
+                                Sửa sơ đồ
+                            </button>
+                            <button class="btn ${isMaintenance ? 'btn-success' : 'btn-warning'} btn-sm fw-semibold w-100"
+                                    onclick="openMaintenanceModal('${room.id}', '${room.tenPhong}', '${room.trangThai}')">
+                                <i class="fa-solid ${isMaintenance ? 'fa-check' : 'fa-screwdriver-wrench'} me-1"></i>
+                                ${isMaintenance ? 'Hoàn tất' : 'Bảo trì'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -273,8 +316,75 @@ async function loadScreeningRooms() {
             container.insertAdjacentHTML('beforeend', cardHtml);
         });
     } catch (error) {
-        console.error('Lỗi tải danh sách phòng chiếu:', error);
+
+        console.error("Lỗi khi tải danh sách phòng chiếu:", error);
     }
+}
+
+// Hàm mở Modal và nạp thông tin
+
+// Khai báo biến lưu trữ ID phòng và ID phiếu bảo trì đang hoạt động
+let currentMaintenanceRoomId = null;
+let currentMaintenanceHistoryId = null;
+
+// Mở Modal Bảo Trì / Hoàn Tất
+async function openMaintenanceModal(roomId, roomName, currentStatus) {
+    currentMaintenanceRoomId = roomId;
+
+    const roomTitleEl = document.getElementById('maintenanceRoomName');
+    if (roomTitleEl) roomTitleEl.innerText = roomName;
+
+    const statusSelect = document.getElementById('maintStatus');
+    const submitBtn = document.querySelector('#maintenanceForm button[type="submit"]');
+
+    // Khai báo chính xác 2 ô input ngày tháng
+    const startDateInput = document.getElementById('maintStartDate');
+    const endDateInput = document.getElementById('maintEndDate');
+
+    if (currentStatus === 'BAO_TRI') {
+        // --- TRƯỜNG HỢP HOÀN TẤT BẢO TRÌ ---
+        try {
+            const response = await fetch(`/screening-rooms/api/maintenance-history/active?roomId=${roomId}`);
+            if (response.ok) {
+                const activeData = await response.json();
+
+                // Nạp thông tin mô tả, người thực hiện, chi phí
+                if (document.getElementById('maintType')) document.getElementById('maintType').value = activeData.loaiBaoTri || 'Định kỳ';
+                if (document.getElementById('maintPerson')) document.getElementById('maintPerson').value = activeData.nguoiThucHien || '';
+                if (document.getElementById('maintCost')) document.getElementById('maintCost').value = activeData.chiPhi || 0;
+                if (document.getElementById('maintDescription')) document.getElementById('maintDescription').value = activeData.moTa || '';
+                if (document.getElementById('maintNote')) document.getElementById('maintNote').value = activeData.ghiChu || '';
+
+                // Nạp ngày bắt đầu cũ từ DB & Tự điền ngày kết thúc là giờ hiện tại
+                if (startDateInput) startDateInput.value = formatToDatetimeLocal(activeData.ngayBatDau);
+                if (endDateInput) endDateInput.value = getCurrentDatetimeLocal();
+            }
+        } catch (error) {
+            console.error('Lỗi khi nạp dữ liệu bảo trì cũ:', error);
+        }
+
+        if (statusSelect) statusSelect.value = 'Hoàn thành';
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i>Xác nhận Hoàn Tất';
+            submitBtn.className = 'btn btn-success text-white fw-bold px-4';
+        }
+    } else {
+
+        const form = document.getElementById('maintenanceForm');
+        if (form) form.reset();
+        if (startDateInput) startDateInput.value = getCurrentDatetimeLocal();
+        if (endDateInput) endDateInput.value = '';
+
+        if (statusSelect) statusSelect.value = 'Đang thực hiện';
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i>Bắt đầu bảo trì';
+            submitBtn.className = 'btn text-white fw-bold px-4';
+            submitBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
+
+    const maintModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('maintenanceModal'));
+    maintModal.show();
 }
 
 //  Tạo mới phòng chiếu (Kèm sơ đồ ghế JSON)
@@ -486,4 +596,50 @@ function updateRoomCard(room) {
 
     const badgeAisle = cardElement.querySelector('.badge-aisle');
     if (badgeAisle) badgeAisle.textContent = room.coLoiDi ? 'Có lối đi' : 'Không lối đi';
+}
+// Hàm gửi dữ liệu bảo trì về Backend
+async function submitMaintenance() {
+    if (!currentMaintenanceRoomId) {
+        showNotify('Lỗi!', 'Chưa xác định được phòng chiếu.', false);
+        return;
+    }
+
+    const maintType = document.getElementById('maintType')?.value || '';
+    const maintPerson = document.getElementById('maintPerson')?.value || '';
+    const maintCost = parseFloat(document.getElementById('maintCost')?.value || 0);
+    const maintDescription = document.getElementById('maintDescription')?.value || '';
+    const maintNote = document.getElementById('maintNote')?.value || '';
+
+    const requestData = {
+        loaiBaoTri: maintType,
+        nguoiThucHien: maintPerson,
+        chiPhi: maintCost,
+        moTa: maintDescription,
+        ghiChu: maintNote
+    };
+
+    try {
+        const response = await fetch(`/screening-rooms/api/${currentMaintenanceRoomId}/maintenance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+
+        if (response.ok) {
+            // Đóng Modal
+            const modalEl = document.getElementById('maintenanceModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+
+            // Tải lại danh sách phòng chiếu
+            loadScreeningRooms();
+            showNotify('Thành Công!', 'Cập nhật trạng thái bảo trì thành công.', true);
+        } else {
+            const err = await response.json().catch(() => ({}));
+            showNotify('Thất Bại!', err.message || 'Không thể cập nhật bảo trì.', false);
+        }
+    } catch (error) {
+        console.error('Lỗi khi lưu bảo trì:', error);
+        showNotify('Lỗi Kết Nối!', 'Không thể kết nối tới Server.', false);
+    }
 }

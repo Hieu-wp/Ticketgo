@@ -13,5 +13,6 @@ public record ResponseScreeningRoom(
         Integer soCotGhe,
         Integer tongSoGhe,
         Boolean coLoiDi,
+        String trangThai,
         List<SeatLayout> seatLayout
 ) {}

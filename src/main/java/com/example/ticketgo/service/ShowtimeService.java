@@ -272,15 +272,25 @@ public class ShowtimeService {
                 movieCategoryName
         );
 
+
         ResponseScreeningRoom roomRecord = new ResponseScreeningRoom(
-                room.getId(), room.getTenPhong(), room.getSoLuongGheThuong(),
-                room.getSoLuongGheVip(), room.getSoHangGhe(), room.getSoCotGhe(),
-                room.getTongSoGhe(), room.getCoLoiDi(), room.getSeatLayout()
+                room.getId(),
+                room.getTenPhong(),
+                room.getSoLuongGheThuong(),
+                room.getSoLuongGheVip(),
+                room.getSoHangGhe(),
+                room.getSoCotGhe(),
+                room.getTongSoGhe(),
+                room.getCoLoiDi(),
+                room.getTrangThai(),
+                room.getSeatLayout()
         );
 
         List<ComboResponse> comboResponses = (showtime.getCombos() != null)
                 ? showtime.getCombos().stream().map(comboService::mapToResponse).toList()
                 : Collections.emptyList();
+
+        // ... Giữ nguyên phần return ShowtimeResponse phía dưới
 
         // 3. TÍNH SỐ VÉ ĐÃ BÁN CỦA SUẤT CHIẾU
         int ticketsSold = ticketRepository.countByShowtimeId(showtime.getId());

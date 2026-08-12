@@ -149,3 +149,39 @@
             height: 14px;
             border-radius: 3px;
         }
+       /* 1. Ép Modal thông báo nổi lên trên cùng */
+       #notifyModal {
+           z-index: 2000 !important;
+       }
+
+       /* 2. Ép lớp phông tối (backdrop) thứ 2 nằm giữa Modal bảo trì và Modal thông báo */
+       .modal-backdrop:nth-of-type(2) {
+           z-index: 1990 !important;
+       }
+      /* Nút Lịch sử bảo trì (Giống hệt nút Thêm phòng chiếu) */
+      .btn-history {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 20px;
+          background: var(--purple-radiant) !important;
+          color: #ffffff !important;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 0.95rem;
+          text-decoration: none !important;
+          border: none;
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+          transition: all 0.25s ease-in-out;
+      }
+
+      .btn-history:hover {
+          color: #ffffff !important;
+          opacity: 0.92;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 18px rgba(168, 85, 247, 0.4);
+      }
+
+      .btn-history:active {
+          transform: translateY(0);
+      }

@@ -71,8 +71,6 @@ public class Booking {
 
     @PrePersist
     protected void onCreate() {
-        // FIX: id không có @GeneratedValue và không insertable=false -> Hibernate sẽ insert NULL
-        // nếu không tự sinh ở đây, vi phạm ràng buộc NOT NULL của cột id.
         if (this.id == null || this.id.isEmpty()) {
             this.id = generateShortCode(5);
         }
