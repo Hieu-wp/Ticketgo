@@ -81,7 +81,7 @@ async function applyFilters() {
         cachedAnalyticsData = data;
 
         // 1. Cập nhật KPI
-        updateKPIs(data.kpi);
+       updateKPIs(data.kpi, data.charts?.dailyRevenue, period);
 
         // 2. Cập nhật Biểu đồ
         if (typeof Chart === 'undefined') {
@@ -109,15 +109,24 @@ async function applyFilters() {
 
 // 3. CẬP NHẬT THẺ KPI (SỬA LỖI ĐẾM SỐ PHIM ĐANG CHIẾU)
 
-function updateKPIs(kpi) {
+function updateKPIs(kpi, dailyRevenueData, period) {
     if (!kpi) return;
     const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
-    setTxt('kpi-revenue', fmtMoney(kpi.totalRevenue || 0));
+    let totalRevenue = kpi.totalRevenue || 0;
+    const p = (period || '7d').toLowerCase();
+
+    // Nếu lọc theo ngày (1d/today), tự động cộng dồn từ mảng dailyRevenue đã chuẩn hóa múi giờ local
+    if ((p === '1d' || p === 'today') && Array.isArray(dailyRevenueData) && dailyRevenueData.length > 0) {
+        totalRevenue = dailyRevenueData.reduce((sum, item) => {
+            return sum + Number(item.totalAmount ?? item.revenue ?? item.value ?? 0);
+        }, 0);
+    }
+
+    setTxt('kpi-revenue', fmtMoney(totalRevenue));
     setTxt('kpi-tickets', fmtNumber(kpi.ticketsSold || 0));
     setTxt('kpi-customers', fmtNumber(kpi.totalCustomers || 0));
     setTxt('kpi-combo', fmtMoney(kpi.comboRevenue || 0));
-    // Chỉ đếm activeMovies (hoặc totalMovies), không đếm totalBookings hay totalShows
     setTxt('kpi-movies', fmtNumber(kpi.activeMovies ?? kpi.totalMovies ?? 0));
     setTxt('kpi-shows', fmtNumber(kpi.totalShows || 0));
 }
@@ -182,25 +191,30 @@ function renderRevenueChart(dailyData, period) {
     const items = Array.isArray(dailyData) ? dailyData : [];
 
     if (p === '1d' || p === 'today') {
-        // HÔM NAY: Chia 24 khung giờ từ 00:00 đến 23:00
         labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
         totals = new Array(24).fill(0);
 
         items.forEach(i => {
-            const rawTime = String(i.timeSlot || i.date || i.hour || '');
-            const match = rawTime.match(/(\d{1,2}):\d{2}/) || rawTime.match(/(\d{1,2})h/);
-            const val = (i.totalAmount ?? i.revenue ?? i.value ?? 0);
+            const val = Number(i.totalAmount ?? i.revenue ?? i.value ?? 0);
+            let hour = -1;
 
-            if (match) {
-                const hour = parseInt(match[1], 10);
-                if (hour >= 0 && hour < 24) totals[hour] += val;
-            } else if (!isNaN(parseInt(rawTime, 10)) && parseInt(rawTime, 10) >= 0 && parseInt(rawTime, 10) < 24) {
-                totals[parseInt(rawTime, 10)] += val;
+            if (i.hour !== undefined && i.hour !== null && !isNaN(i.hour)) {
+                hour = parseInt(i.hour, 10);
+            } else {
+                const rawStr = i.timeSlot || i.date || i.time || i.createdAt;
+                if (rawStr) {
+                    const dateObj = new Date(rawStr);
+                    if (!isNaN(dateObj.getTime())) {
+                        hour = dateObj.getHours(); // Tự động chuyển đổi sang giờ địa phương (UTC+7)
+                    }
+                }
+            }
+
+            if (hour >= 0 && hour < 24) {
+                totals[hour] += val;
             }
         });
-
     } else if (p === '7d') {
-        // 7 NGÀY: Lấy 7 ngày gần nhất tính đến hôm nay
         const dateKeys = [];
         const now = new Date();
         for (let i = 6; i >= 0; i--) {
@@ -221,9 +235,7 @@ function renderRevenueChart(dailyData, period) {
             const val = (i.totalAmount ?? i.revenue ?? i.value ?? 0);
             if (foundIdx !== -1) totals[foundIdx] += val;
         });
-
     } else if (p === '30d' || p === 'month') {
-        // THÁNG: Chia 4 mốc tuần
         labels = ['Tuần 1 (1-7)', 'Tuần 2 (8-14)', 'Tuần 3 (15-21)', 'Tuần 4 (22-cuối)'];
         totals = [0, 0, 0, 0];
 
@@ -246,9 +258,7 @@ function renderRevenueChart(dailyData, period) {
                 }
             }
         });
-
     } else if (p === '1y' || p === 'year') {
-        // NĂM: 12 Tháng
         labels = Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`);
         totals = new Array(12).fill(0);
 
@@ -345,9 +355,38 @@ function renderHourlyChart(hourlyData) {
     if (!canvas) return;
     if (chartHourlyInstance) chartHourlyInstance.destroy();
 
-    const labels = hourlyData.map(i => i.timeSlot || i.label || i.hour);
-    const values = hourlyData.map(i => i.ticketCount ?? i.value ?? i.tickets ?? 0);
+    // 1. Khởi tạo mảng 24 khung giờ cố định từ 00:00 -> 23:00
+    const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+    const values = new Array(24).fill(0);
 
+    const items = Array.isArray(hourlyData) ? hourlyData : [];
+
+    // 2. Cộng dồn số vé vào đúng khung giờ (Tự động chuyển UTC về giờ địa phương)
+    items.forEach(i => {
+        const count = Number(i.ticketCount ?? i.tickets ?? i.value ?? i.count ?? 0);
+        let hour = -1;
+
+        if (i.hour !== undefined && i.hour !== null && !isNaN(i.hour)) {
+            hour = parseInt(i.hour, 10);
+        } else {
+            const rawStr = i.timeSlot || i.label || i.time || i.createdAt || i.showtime;
+            if (rawStr) {
+                const dateObj = new Date(rawStr);
+                if (!isNaN(dateObj.getTime())) {
+                    hour = dateObj.getHours(); // Quy đổi sang UTC+7
+                } else {
+                    const match = String(rawStr).match(/(\d{1,2}):\d{2}/) || String(rawStr).match(/(\d{1,2})h/);
+                    if (match) hour = parseInt(match[1], 10);
+                }
+            }
+        }
+
+        if (hour >= 0 && hour < 24) {
+            values[hour] += count;
+        }
+    });
+
+    // 3. Vẽ biểu đồ với dữ liệu chuẩn 24h
     chartHourlyInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: {
@@ -554,35 +593,35 @@ function renderTables(tables) {
         }
     }, "Bảng Giao dịch");
 
-    // Bảng 4: Suất chiếu sắp tới
-    runSafe(() => {
-        const upcomingBody = document.getElementById('table-upcoming');
-        if (upcomingBody) {
-            const list = tables.upcomingShowtimes || tables.suatChieu || tables.upcoming || [];
-            upcomingBody.innerHTML = list.length === 0
-                ? '<tr><td colspan="5" class="text-center text-muted py-3">Không có suất chiếu sắp tới</td></tr>'
-                : list.map(s => {
-                    const time = s.time || s.gioChieu || s.startTime || '-';
-                    const movie = s.movie || s.tenPhim || '-';
-                    const room = s.room || s.tenPhong || '-';
-                    const sold = s.sold ?? s.veDaBan ?? s.ticketsSold ?? 0;
-                    const total = s.total ?? s.tongGhe ?? s.capacity ?? 0;
-                    const remaining = s.available ?? s.conLai ?? (total > 0 ? Math.max(0, total - sold) : '-');
 
-                    return `
-                        <tr>
-                            <td><strong class="text-primary">${time}</strong></td>
-                            <td class="fw-medium">${movie}</td>
-                            <td>${room}</td>
-                            <td><span class="text-success fw-bold">${sold}</span></td>
-                            <td><span class="text-muted">${remaining}</span></td>
-                        </tr>
-                    `;
-                }).join('');
-        }
-    }, "Bảng Suất chiếu");
+   // Bảng 4: Suất chiếu sắp tới
+   runSafe(() => {
+       const upcomingBody = document.getElementById('table-upcoming');
+       if (upcomingBody) {
+           const list = tables.upcomingShowtimes || tables.upcomingShows || tables.suatChieuSapToi || tables.suatChieu || tables.upcoming || tables.showtimes || [];
+           upcomingBody.innerHTML = list.length === 0
+               ? '<tr><td colspan="5" class="text-center text-muted py-3">Không có suất chiếu sắp tới</td></tr>'
+               : list.map(s => {
+                   const time = s.time || s.gioChieu || s.startTime || (s.showtime ? new Date(s.showtime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '-');
+                   const movie = (typeof s.movie === 'object' ? (s.movie?.title || s.movie?.tenPhim || s.movie?.name) : s.movie) || s.movieTitle || s.movieName || s.tenPhim || '-';
+                   const room = (typeof s.room === 'object' ? (s.room?.name || s.room?.tenPhong) : s.room) || s.roomName || s.tenPhong || '-';
+                   const sold = s.sold ?? s.veDaBan ?? s.ticketsSold ?? 0;
+                   const total = s.total ?? s.tongGhe ?? s.capacity ?? 0;
+                   const remaining = s.available ?? s.conLai ?? (total > 0 ? Math.max(0, total - sold) : '-');
+
+                   return `
+                       <tr>
+                           <td><strong class="text-primary">${time}</strong></td>
+                           <td class="fw-medium">${movie}</td>
+                           <td>${room}</td>
+                           <td><span class="text-success fw-bold">${sold}</span></td>
+                           <td><span class="text-muted">${remaining}</span></td>
+                       </tr>
+                   `;
+               }).join('');
+       }
+   }, "Bảng Suất chiếu");
 }
-
 // -------------------------------------------------------------
 // 6. TIỆN ÍCH ĐỊNH DẠNG (FORMATTERS)
 // -------------------------------------------------------------

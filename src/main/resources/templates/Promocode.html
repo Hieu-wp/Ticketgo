@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lí khuyến mãi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/Promocode.css">
+</head>
+<body>
+<div th:replace="~{sidebar :: sidebarFragment}"></div>
+
+<div class="main-content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h3 class="page-title mb-1">Quản Lý Mã Giảm Giá</h3>
+            <p class="text-muted mb-0">Danh sách các mã khuyến mãi hiện có trong hệ thống</p>
+        </div>
+
+        <button type="button" class="btn-purple" data-bs-toggle="modal" data-bs-target="#createModal" onclick="openCreateForm()">
+            <i class="fa-solid fa-plus me-1"></i> Tạo mã giảm giá
+        </button>
+    </div>
+
+    <!-- Search + Filter -->
+    <div class="toolbar-card mb-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-lg-6">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="form-control" id="searchInput" name="keyword"
+                           placeholder="Tìm theo tên hoặc mã giảm giá..." oninput="onSearchOrFilterChange()">
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <select class="form-select" id="statusFilter" name="status" onchange="onSearchOrFilterChange()">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="active">Đang hoạt động</option>
+                    <option value="upcoming">Sắp diễn ra</option>
+                    <option value="expired">Đã hết hạn</option>
+                </select>
+            </div>
+
+            <div class="col-lg-3 text-lg-end">
+                <span class="text-muted small" id="totalCount">Tổng: 0 mã</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voucher Cards Container -->
+    <div class="row g-4" id="voucherList"></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state d-none">
+        <i class="fa-solid fa-ticket-slash"></i>
+        <h5>Không tìm thấy mã giảm giá</h5>
+        <p class="text-muted mb-0">Thử thay đổi từ khóa hoặc bộ lọc.</p>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <span class="text-muted small" id="pageInfo">Hiển thị 0 trên 0</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+
+</div>
+
+<!-- ==================== MODAL TẠO MÃ GIẢM GIÁ ==================== -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-plus-circle me-2"></i> Tạo mã giảm giá mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <!-- Form -->
+                    <div class="col-lg-7">
+                        <form id="createForm" onsubmit="return submitCreate(event)">
+                            <div class="mb-3">
+                                <label class="form-label">Tên chương trình *</label>
+                                <input type="text" class="form-control" id="c_name" name="name" placeholder="VD: Ưu đãi cuối tuần" required oninput="updatePreview()">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Mã giảm giá *</label>
+                                <input type="text" class="form-control code-input" id="c_code" name="code" placeholder="VD: WEEKEND20" maxlength="20" required oninput="updatePreview()">
+                                <div class="hint">Chỉ dùng chữ in hoa, số và dấu gạch dưới</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Loại giảm giá *</label>
+                                <div class="discount-type">
+                                    <div class="discount-option">
+                                        <input type="radio" name="discountType" id="c_type_percent" value="percent" checked onchange="toggleDiscountType('create'); updatePreview();">
+                                        <label for="c_type_percent"><i class="fa-solid fa-percent me-1"></i> Phần trăm (%)</label>
+                                    </div>
+                                    <div class="discount-option">
+                                        <input type="radio" name="discountType" id="c_type_fixed" value="fixed" onchange="toggleDiscountType('create'); updatePreview();">
+                                        <label for="c_type_fixed"><i class="fa-solid fa-coins me-1"></i> Số tiền cố định</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" id="c_discountLabel">Giá trị giảm (%) *</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="c_discountValue" name="discountValue" min="1" required oninput="updatePreview()">
+                                        <span class="input-group-text" id="c_discountUnit">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Giảm tối đa (₫)</label>
+                                    <input type="number" class="form-control" id="c_maxDiscount" name="maxDiscount" min="0" step="1000" oninput="updatePreview()">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Đơn hàng tối thiểu (₫) *</label>
+                                <input type="number" class="form-control" id="c_minOrder" name="minOrder" min="0" step="1000" required oninput="updatePreview()">
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Ngày bắt đầu *</label>
+                                    <input type="date" class="form-control" id="c_start" name="startDate" required onchange="updatePreview()">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Ngày kết thúc *</label>
+                                    <input type="date" class="form-control" id="c_end" name="endDate" required onchange="updatePreview()">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Số lượng mã *</label>
+                                    <input type="number" class="form-control" id="c_usage" name="usageLimit" min="1" required oninput="updatePreview()">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Đối tượng áp dụng</label>
+                                    <select class="form-select" id="c_customer" name="customerType" onchange="updatePreview()">
+                                        <option value="Tất cả khách hàng">Tất cả khách hàng</option>
+                                        <option value="Khách hàng mới">Khách hàng mới</option>
+                                        <option value="Khách hàng thân thiết">Khách hàng thân thiết</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="status-switch mb-3">
+                                <div>
+                                    <div class="fw-semibold">Kích hoạt ngay</div>
+                                    <div class="hint mb-0">Mã sẽ ở trạng thái "Đang hoạt động"</div>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="c_active" name="isActive" checked style="width: 48px; height: 24px;">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Dynamic Preview -->
+                    <div class="col-lg-5">
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <h6 class="mb-0"><i class="fa-solid fa-eye me-2"></i> Xem trước</h6>
+                            </div>
+                            <div class="voucher-preview">
+                                <div class="voucher-top">
+                                    <div class="voucher-code" id="preview_code">--</div>
+                                    <div class="voucher-discount" id="preview_discount">--</div>
+                                    <div class="fw-semibold mt-2" id="preview_name">--</div>
+                                </div>
+                                <div class="voucher-bottom">
+                                    <div class="preview-row">
+                                        <span>Đơn tối thiểu</span>
+                                        <strong id="preview_min">-- ₫</strong>
+                                    </div>
+                                    <div class="preview-row">
+                                        <span>Giảm tối đa</span>
+                                        <strong id="preview_max">-- ₫</strong>
+                                    </div>
+                                    <div class="preview-row">
+                                        <span>Thời gian</span>
+                                        <strong id="preview_time">--/--/---- - --/--/----</strong>
+                                    </div>
+                                    <div class="preview-row">
+                                        <span>Đối tượng</span>
+                                        <strong id="preview_customer">--</strong>
+                                    </div>
+                                    <div class="preview-row">
+                                        <span>Số lượng</span>
+                                        <strong id="preview_usage">--</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-light-custom" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn-purple" onclick="document.getElementById('createForm').requestSubmit()">
+                    <i class="fa-solid fa-check me-1"></i> Tạo mã
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL CHỈNH SỬA ==================== -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-pen-to-square me-2"></i> Chỉnh sửa mã giảm giá
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" onsubmit="return submitEdit(event)">
+                    <input type="hidden" id="e_id" name="id">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên chương trình *</label>
+                        <input type="text" class="form-control" id="e_name" name="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mã giảm giá *</label>
+                        <input type="text" class="form-control code-input" id="e_code" name="code" maxlength="20" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Loại giảm giá *</label>
+                        <div class="discount-type">
+                            <div class="discount-option">
+                                <input type="radio" name="discountType" id="e_type_percent" value="percent" onchange="toggleDiscountType('edit')">
+                                <label for="e_type_percent"><i class="fa-solid fa-percent me-1"></i> Phần trăm (%)</label>
+                            </div>
+                            <div class="discount-option">
+                                <input type="radio" name="discountType" id="e_type_fixed" value="fixed" onchange="toggleDiscountType('edit')">
+                                <label for="e_type_fixed"><i class="fa-solid fa-coins me-1"></i> Số tiền cố định</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label" id="e_discountLabel">Giá trị giảm *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="e_discountValue" name="discountValue" min="1" required>
+                                <span class="input-group-text" id="e_discountUnit">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Giảm tối đa (₫)</label>
+                            <input type="number" class="form-control" id="e_maxDiscount" name="maxDiscount" min="0" step="1000">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Đơn hàng tối thiểu (₫) *</label>
+                        <input type="number" class="form-control" id="e_minOrder" name="minOrder" min="0" step="1000" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày bắt đầu *</label>
+                            <input type="date" class="form-control" id="e_start" name="startDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày kết thúc *</label>
+                            <input type="date" class="form-control" id="e_end" name="endDate" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Số lượng mã *</label>
+                            <input type="number" class="form-control" id="e_usage" name="usageLimit" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Đã sử dụng</label>
+                            <input type="number" class="form-control" id="e_used" name="usedCount" min="0" readonly>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Đối tượng áp dụng</label>
+                        <select class="form-select" id="e_customer" name="customerType">
+                            <option value="Tất cả khách hàng">Tất cả khách hàng</option>
+                            <option value="Khách hàng mới">Khách hàng mới</option>
+                            <option value="Khách hàng thân thiết">Khách hàng thân thiết</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trạng thái</label>
+                        <select class="form-select" id="e_status" name="status">
+                            <option value="active">Đang hoạt động</option>
+                            <option value="upcoming">Sắp diễn ra</option>
+                            <option value="expired">Đã hết hạn</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-light-custom" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn-purple" onclick="document.getElementById('editForm').requestSubmit()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL XEM CHI TIẾT ==================== -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-ticket me-2"></i> Chi tiết mã giảm giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Nội dung render động qua JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-light-custom" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ==================== MODAL THÔNG BÁO ==================== -->
+<div class="modal fade" id="notificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow text-center p-3">
+            <div class="modal-body p-2">
+                <!-- Icon động theo trạng thái -->
+                <div class="mb-3" id="notificationIconWrapper">
+                    <i class="fa-solid fa-circle-check text-success display-4" id="notificationIcon"></i>
+                </div>
+
+                <!-- Tiêu đề & Nội dung -->
+                <h5 class="fw-bold mb-2" id="notificationTitle">--</h5>
+                <p class="text-muted mb-4 small" id="notificationMessage">--</p>
+
+                <!-- Nút xác nhận -->
+                <button type="button" class="btn btn-purple w-100" data-bs-dismiss="modal" id="notificationBtn">
+                    Đồng ý
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/Promocode.js}"></script>
+</body>
+</html>

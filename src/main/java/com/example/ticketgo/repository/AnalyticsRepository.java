@@ -11,11 +11,19 @@ import java.util.List;
 @Repository
 public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.entity.Booking, String> {
 
-    // 1. Thống kê tổng quan (KPI Summary) - Cột index 4 đếm số Phim đang có suất chiếu
+    // 1. KPI Summary
     @Query(value = """
     SELECT 
         COALESCE(SUM(b.total_amount), 0) AS totalRevenue,
-        COUNT(DISTINCT t.id) AS ticketsSold,
+        (SELECT COUNT(t.id) 
+           FROM tickets t 
+           JOIN bookings b_sub ON t.booking_id = b_sub.id 
+           JOIN showtimes s_sub ON b_sub.showtime_id = s_sub.id
+           WHERE b_sub.status = 'PAID' 
+             AND t.status IN ('VALID', 'SOLD', 'USED')
+             AND b_sub.booking_date BETWEEN :startDate AND :endDate
+             AND (:roomId = 'all' OR CAST(s_sub.room_id AS VARCHAR) = :roomId)
+             AND (:movieId = 'all' OR CAST(s_sub.movie_id AS VARCHAR) = :movieId)) AS ticketsSold,
         COUNT(DISTINCT b.customer_id) AS totalCustomers,
         COUNT(DISTINCT b.id) AS totalBookings,
         (SELECT COUNT(DISTINCT s2.movie_id) 
@@ -28,27 +36,26 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
            WHERE b2.status = 'PAID'
              AND b2.combo_id IS NOT NULL
              AND b2.booking_date BETWEEN :startDate AND :endDate
-             AND (:roomId IS NULL OR s3.room_id = :roomId)
-             AND (:movieId IS NULL OR s3.movie_id = :movieId)) AS comboRevenue,
+             AND (:roomId = 'all' OR CAST(s3.room_id AS VARCHAR) = :roomId)
+             AND (:movieId = 'all' OR CAST(s3.movie_id AS VARCHAR) = :movieId)) AS comboRevenue,
         (SELECT COUNT(*)
            FROM showtimes s4
            WHERE s4.show_date BETWEEN :startDate AND :endDate
-             AND (:roomId IS NULL OR s4.room_id = :roomId)
-             AND (:movieId IS NULL OR s4.movie_id = :movieId)) AS totalShows
+             AND (:roomId = 'all' OR CAST(s4.room_id AS VARCHAR) = :roomId)
+             AND (:movieId = 'all' OR CAST(s4.movie_id AS VARCHAR) = :movieId)) AS totalShows
     FROM bookings b
     JOIN showtimes s ON b.showtime_id = s.id
-    LEFT JOIN tickets t ON t.booking_id = b.id AND t.status IN ('VALID', 'SOLD', 'USED')
     WHERE b.status = 'PAID'
       AND b.booking_date BETWEEN :startDate AND :endDate
-      AND (:roomId IS NULL OR s.room_id = :roomId)
-      AND (:movieId IS NULL OR s.movie_id = :movieId)
+      AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+      AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
 """, nativeQuery = true)
     List<Object[]> getKpiSummary(@Param("startDate") LocalDate startDate,
                                  @Param("endDate") LocalDate endDate,
                                  @Param("roomId") String roomId,
                                  @Param("movieId") String movieId);
 
-    // 2. Biểu đồ Doanh thu theo ngày
+    // 2. Doanh thu theo ngày
     @Query(value = """
         SELECT 
             TO_CHAR(b.booking_date, 'YYYY-MM-DD') AS date,
@@ -57,17 +64,17 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         JOIN showtimes s ON b.showtime_id = s.id
         WHERE b.status = 'PAID'
           AND b.booking_date BETWEEN :startDate AND :endDate
-          AND (:roomId IS NULL OR s.room_id = :roomId)
-          AND (:movieId IS NULL OR s.movie_id = :movieId)
-        GROUP BY b.booking_date
-        ORDER BY b.booking_date ASC
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+          AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
+        GROUP BY TO_CHAR(b.booking_date, 'YYYY-MM-DD')
+        ORDER BY date ASC
     """, nativeQuery = true)
     List<Object[]> getDailyRevenue(@Param("startDate") LocalDate startDate,
                                    @Param("endDate") LocalDate endDate,
                                    @Param("roomId") String roomId,
                                    @Param("movieId") String movieId);
 
-    // 2b. Biểu đồ Doanh thu theo GIỜ (dùng riêng cho period = 1d/today)
+    // 2b. Doanh thu theo giờ
     @Query(value = """
     SELECT 
         TO_CHAR(s.start_time, 'HH24:00') AS date,
@@ -76,8 +83,8 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
     JOIN showtimes s ON b.showtime_id = s.id
     WHERE b.status = 'PAID'
       AND b.booking_date BETWEEN :startDate AND :endDate
-      AND (:roomId IS NULL OR s.room_id = :roomId)
-      AND (:movieId IS NULL OR s.movie_id = :movieId)
+      AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+      AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
     GROUP BY TO_CHAR(s.start_time, 'HH24:00')
     ORDER BY date ASC
 """, nativeQuery = true)
@@ -86,7 +93,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
                                     @Param("roomId") String roomId,
                                     @Param("movieId") String movieId);
 
-    // 3. Biểu đồ Tỷ lệ doanh thu theo Phim
+    // 3. Tỷ lệ doanh thu theo Phim
     @Query(value = """
         SELECT 
             m.title AS label,
@@ -96,7 +103,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         JOIN movies m ON s.movie_id = m.id
         WHERE b.status = 'PAID'
           AND b.booking_date BETWEEN :startDate AND :endDate
-          AND (:roomId IS NULL OR s.room_id = :roomId)
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
         GROUP BY m.id, m.title
         ORDER BY value DESC
     """, nativeQuery = true)
@@ -104,7 +111,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
                                         @Param("endDate") LocalDate endDate,
                                         @Param("roomId") String roomId);
 
-    // 4. Biểu đồ Khung giờ bán vé chạy nhất
+    // 4. Khung giờ bán vé
     @Query(value = """
         SELECT 
             TO_CHAR(s.start_time, 'HH24:00') AS timeSlot,
@@ -115,8 +122,8 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         WHERE b.status = 'PAID'
           AND b.booking_date BETWEEN :startDate AND :endDate
           AND t.status IN ('VALID', 'SOLD', 'USED')
-          AND (:roomId IS NULL OR s.room_id = :roomId)
-          AND (:movieId IS NULL OR s.movie_id = :movieId)
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+          AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
         GROUP BY TO_CHAR(s.start_time, 'HH24:00')
         ORDER BY timeSlot ASC
     """, nativeQuery = true)
@@ -125,7 +132,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
                                     @Param("roomId") String roomId,
                                     @Param("movieId") String movieId);
 
-    // 5. Biểu đồ Tỷ lệ loại ghế (THUONG vs VIP)
+    // 5. Tỷ lệ loại ghế
     @Query(value = """
         SELECT 
             t.seat_type AS label,
@@ -136,8 +143,8 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         WHERE b.status = 'PAID'
           AND b.booking_date BETWEEN :startDate AND :endDate
           AND t.status IN ('VALID', 'SOLD', 'USED')
-          AND (:roomId IS NULL OR s.room_id = :roomId)
-          AND (:movieId IS NULL OR s.movie_id = :movieId)
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+          AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
         GROUP BY t.seat_type
     """, nativeQuery = true)
     List<Object[]> getSeatTypeRatio(@Param("startDate") LocalDate startDate,
@@ -145,7 +152,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
                                     @Param("roomId") String roomId,
                                     @Param("movieId") String movieId);
 
-    // 6. Biểu đồ Top Combo đồ ăn/thức uống
+    // 6. Top Combo
     @Query(value = """
         SELECT 
             c.name AS comboName,
@@ -162,17 +169,23 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
     List<Object[]> getTopCombos(@Param("startDate") LocalDate startDate,
                                 @Param("endDate") LocalDate endDate);
 
-    // 7. Bảng Top Phim Doanh Thu
+    // 7. Top Phim
     @Query(value = """
         SELECT 
             m.id AS id,
             m.title AS title,
-            COUNT(DISTINCT t.id) AS ticketsSold,
+            (SELECT COUNT(t.id) 
+               FROM tickets t 
+               JOIN showtimes s2 ON t.showtime_id = s2.id 
+               JOIN bookings b2 ON t.booking_id = b2.id
+               WHERE s2.movie_id = m.id 
+                 AND b2.status = 'PAID' 
+                 AND t.status IN ('VALID', 'SOLD', 'USED') 
+                 AND b2.booking_date BETWEEN :startDate AND :endDate) AS ticketsSold,
             COALESCE(SUM(b.total_amount), 0) AS totalRevenue
         FROM movies m
         JOIN showtimes s ON s.movie_id = m.id
         JOIN bookings b ON b.showtime_id = s.id AND b.status = 'PAID' AND b.booking_date BETWEEN :startDate AND :endDate
-        LEFT JOIN tickets t ON t.booking_id = b.id AND t.status IN ('VALID', 'SOLD', 'USED')
         GROUP BY m.id, m.title
         ORDER BY totalRevenue DESC
         LIMIT 5
@@ -180,7 +193,7 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
     List<Object[]> getTopMovies(@Param("startDate") LocalDate startDate,
                                 @Param("endDate") LocalDate endDate);
 
-    // 8. Bảng Hiệu suất Phòng Chiếu (Đã sửa screening_room, ten_phong, tong_so_ghe)
+    // 8. Hiệu suất Phòng
     @Query(value = """
         SELECT 
             sr.id AS roomId,
@@ -195,11 +208,11 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
     List<Object[]> getRoomDetails(@Param("startDate") LocalDate startDate,
                                   @Param("endDate") LocalDate endDate);
 
-    // 9. Bảng Giao dịch gần đây (Đã sửa c.name)
+    // 9. Giao dịch gần đây
     @Query(value = """
         SELECT 
             b.booking_code AS code,
-            TO_CHAR(b.created_at, 'HH24:MI DD/MM') AS time,
+            TO_CHAR(b.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'HH24:MI DD/MM') AS time,
             COALESCE(c.name, b.guest_name, 'Khách vãng lai') AS customer,
             m.title AS movie,
             b.total_amount AS total
@@ -207,16 +220,25 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         JOIN showtimes s ON b.showtime_id = s.id
         JOIN movies m ON s.movie_id = m.id
         LEFT JOIN customers c ON b.customer_id = c.id
-        WHERE b.status = 'PAID' AND b.booking_date = CURRENT_DATE
+        WHERE b.status = 'PAID' 
+          AND (
+               b.booking_date BETWEEN :startDate AND :endDate 
+               OR CAST(b.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE) BETWEEN :startDate AND :endDate
+          )
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+          AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
         ORDER BY b.created_at DESC
-        LIMIT 10
+        LIMIT 20
     """, nativeQuery = true)
-    List<Object[]> getRecentTransactions();
+    List<Object[]> getRecentTransactions(@Param("startDate") LocalDate startDate,
+                                         @Param("endDate") LocalDate endDate,
+                                         @Param("roomId") String roomId,
+                                         @Param("movieId") String movieId);
 
-    // 10. Bảng Suất chiếu sắp tới
+    // 10. Suất chiếu sắp tới
     @Query(value = """
         SELECT 
-            TO_CHAR(s.start_time, 'HH24:MI') AS time,
+            CONCAT(TO_CHAR(s.show_date, 'DD/MM'), ' ', TO_CHAR(s.start_time, 'HH24:MI')) AS time,
             m.title AS movie,
             sr.ten_phong AS room,
             COUNT(t.id) AS sold,
@@ -225,11 +247,13 @@ public interface AnalyticsRepository extends JpaRepository<com.example.ticketgo.
         JOIN movies m ON s.movie_id = m.id
         JOIN screening_room sr ON s.room_id = sr.id
         LEFT JOIN tickets t ON t.showtime_id = s.id AND t.status IN ('VALID', 'SOLD', 'USED')
-        WHERE s.show_date = CURRENT_DATE
-          AND s.start_time >= CURRENT_TIME
-        GROUP BY s.id, s.start_time, m.title, sr.ten_phong, sr.tong_so_ghe
-        ORDER BY s.start_time ASC
+        WHERE s.show_date >= CAST(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE)
+          AND (:roomId = 'all' OR CAST(s.room_id AS VARCHAR) = :roomId)
+          AND (:movieId = 'all' OR CAST(s.movie_id AS VARCHAR) = :movieId)
+        GROUP BY s.id, s.show_date, s.start_time, m.title, sr.ten_phong, sr.tong_so_ghe
+        ORDER BY s.show_date ASC, s.start_time ASC
         LIMIT 10
     """, nativeQuery = true)
-    List<Object[]> getUpcomingShowtimes();
+    List<Object[]> getUpcomingShowtimes(@Param("roomId") String roomId,
+                                        @Param("movieId") String movieId);
 }

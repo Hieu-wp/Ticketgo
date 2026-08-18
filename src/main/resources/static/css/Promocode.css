@@ -1,0 +1,596 @@
+:root {
+            --purple-radiant: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --neon-purple: #a855f7;
+            --deep-purple: #5b21b6;
+            --light-bg: #f8fafc;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light-bg);
+            color: #1e293b;
+        }
+
+        .sidebar {
+                  height: 100vh;
+                  position: fixed;
+                  top: 0;
+                  left: 0;
+                  width: 260px;
+                  background: #0f0c29;
+                  color: #fff;
+                  padding-top: 20px;
+                  z-index: 100;
+              }
+
+              .sidebar .brand {
+                  padding: 10px 25px;
+                  font-size: 1.25rem;
+                  font-weight: 700;
+                  background: var(--purple-radiant);
+                  -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent;
+                  margin-bottom: 30px;
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+              }
+
+              /* Khối Avatar: căn giữa theo chiều dọc */
+              .user-profile {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  text-align: center;
+                  padding: 0 20px 25px;
+                  margin-bottom: 15px;
+                  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+              }
+
+              /* Avatar hình tròn, kích thước cố định, ảnh không méo */
+              .avatar-img {
+                  width: 72px;
+                  height: 72px;
+                  border-radius: 50%;
+                  object-fit: cover;
+                  border: 2px solid rgba(168, 85, 247, 0.5);
+                  margin-bottom: 10px;
+              }
+
+              .user-info {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  /* Giới hạn chiều rộng để text dài bị cắt đúng vùng, không tràn ra ngoài sidebar */
+                  max-width: 100%;
+                  min-width: 0;
+              }
+
+              /* Tên user: 1 dòng, dài quá thì hiện dấu ... thay vì tràn hoặc xuống dòng */
+              .user-name {
+                  width: 100%;
+                  font-size: 0.95rem;
+                  font-weight: 600;
+                  color: #fff;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+              }
+
+              /* Vai trò user: tương tự, cắt gọn nếu dài */
+              .user-role {
+                  width: 100%;
+                  font-size: 0.8rem;
+                  color: #94a3b8;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+              }
+
+              .sidebar .nav-link {
+                  color: #94a3b8;
+                  padding: 12px 25px;
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  text-decoration: none;
+                  transition: all 0.3s ease;
+              }
+
+              .sidebar .nav-link.active {
+                  color: #fff;
+                  background: rgba(168, 85, 247, 0.15);
+                  border-left: 4px solid var(--neon-purple);
+              }
+/* khối main content*/
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .toolbar-card {
+            background: #fff;
+            border: 1px solid #e9e5ff;
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, .04);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding-left: 42px;
+            height: 44px;
+            border-radius: 11px;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            z-index: 2;
+        }
+
+        .form-select {
+            height: 44px;
+            border-radius: 11px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        .form-select:focus,
+        .search-box input:focus {
+            border-color: #c4b5fd;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, .12);
+        }
+
+        .voucher-card {
+            background: #fff;
+            border: 1px solid #e9e5ff;
+            border-radius: 18px;
+            overflow: hidden;
+            height: 100%;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, .05);
+            transition: .25s ease;
+        }
+
+        .voucher-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(99, 102, 241, .10);
+        }
+
+        .voucher-card-top {
+            padding: 18px 20px;
+            background: linear-gradient(135deg, #faf9ff, #fdf4ff);
+            border-bottom: 1px dashed #ddd6fe;
+            position: relative;
+        }
+
+        .voucher-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #ede9fe;
+            color: #6d28d9;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .voucher-code {
+            display: inline-block;
+            padding: 6px 10px;
+            background: #f3e8ff;
+            color: #6d28d9;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .voucher-discount {
+            font-size: 26px;
+            font-weight: 800;
+            margin-top: 14px;
+            background: var(--purple-radiant);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .voucher-card-body {
+            padding: 18px 20px;
+        }
+
+        .voucher-info {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 8px 0;
+            font-size: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .voucher-info:last-child {
+            border-bottom: none;
+        }
+
+        .voucher-info span {
+            color: #64748b;
+        }
+
+        .voucher-info strong {
+            color: #334155;
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-upcoming {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .voucher-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .btn-card-action {
+            flex: 1;
+            border: 1px solid #e9e5ff;
+            background: #fff;
+            color: #64748b;
+            border-radius: 9px;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-card-action:hover {
+            background: #f8f5ff;
+            color: #6d28d9;
+            border-color: #ddd6fe;
+        }
+
+        .btn-card-action.primary {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .empty-state {
+            background: #fff;
+            border: 1px solid #e9e5ff;
+            border-radius: 18px;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 42px;
+            color: #c4b5fd;
+            margin-bottom: 15px;
+        }
+
+        .pagination .page-link {
+            color: #6d28d9;
+            border-color: #e9e5ff;
+            border-radius: 8px;
+            margin: 0 2px;
+            min-width: 34px;
+            text-align: center;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--neon-purple);
+            border-color: var(--neon-purple);
+            color: #fff;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #94a3b8;
+        }
+
+        @media (max-width: 767px) {
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+
+        .page-title {
+            font-weight: 700;
+            background: var(--purple-radiant);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-card,
+        .preview-card {
+            background: #fff;
+            border: 1px solid #e9e5ff;
+            border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, .05);
+        }
+
+        .card-header-custom {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eee9ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .form-body {
+            padding: 24px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .form-control,
+        .form-select {
+            min-height: 44px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 11px;
+            font-size: 14px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #c4b5fd;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, .12);
+        }
+
+        .input-group-text {
+            background: #f8f5ff;
+            border: 1.5px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        .code-input {
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .discount-type {
+            display: flex;
+            gap: 10px;
+        }
+
+        .discount-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .discount-option input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .discount-option label {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 11px;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            transition: .2s;
+        }
+
+        .discount-option input:checked + label {
+            border-color: var(--neon-purple);
+            background: #f5f3ff;
+            color: #6d28d9;
+        }
+
+        .btn-purple {
+            border: none;
+            color: #fff;
+            background: var(--purple-radiant);
+            border-radius: 11px;
+            padding: 11px 20px;
+            font-weight: 600;
+            box-shadow: 0 5px 14px rgba(168, 85, 247, .18);
+        }
+
+        .btn-purple:hover {
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .btn-light-custom {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #475569;
+            border-radius: 11px;
+            padding: 11px 20px;
+            font-weight: 600;
+        }
+
+        .preview-card {
+            position: sticky;
+            top: 25px;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            background: var(--purple-radiant);
+            color: #fff;
+            padding: 24px;
+        }
+
+        .voucher-preview {
+            margin: 24px;
+            border: 1px dashed #c4b5fd;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #faf9ff;
+        }
+
+        .voucher-top {
+            padding: 22px;
+            text-align: center;
+            border-bottom: 1px dashed #ddd6fe;
+        }
+
+        .voucher-preview .voucher-code {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #6d28d9;
+            background: transparent;
+            padding: 0;
+        }
+
+        .voucher-preview .voucher-discount {
+            font-size: 28px;
+            font-weight: 800;
+            margin-top: 8px;
+            background: var(--purple-radiant);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .voucher-bottom {
+            padding: 16px 20px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .preview-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 7px 0;
+        }
+
+        .preview-row strong {
+            color: #334155;
+            text-align: right;
+        }
+
+        .status-switch {
+            background: #f8f5ff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--neon-purple);
+            border-color: var(--neon-purple);
+        }
+
+        /* Modal custom */
+        .modal-content {
+            border: none;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #faf9ff, #fdf4ff);
+            border-bottom: 1px solid #eee9ff;
+            padding: 18px 24px;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            color: #5b21b6;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #eee9ff;
+            padding: 16px 24px;
+        }
+
+        @media (max-width: 991px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .main-content {
+                margin-left: 220px;
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .preview-card {
+                position: static;
+            }
+        }
+        /* Bổ sung Utility Classes */
+        .bg-purple { background-color: var(--neon-purple) !important; color: #fff; }
+        .text-purple { color: var(--deep-purple) !important; }
+        .bg-purple-light { background: #ede9fe !important; color: #6d28d9 !important; }

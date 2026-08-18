@@ -17,16 +17,14 @@ public class AnalyticsService {
     private final AnalyticsRepository analyticsRepository;
 
     public DashboardAnalyticsDTO getDashboardData(String period, String roomId, String movieId) {
-        // 1. Tính toán khoảng thời gian lọc
         LocalDate[] range = calculateDateRange(period);
         LocalDate startDate = range[0];
         LocalDate endDate = range[1];
 
-        // 2. Chuẩn hóa giá trị lọc ("all" hoặc rỗng -> null)
-        String filterRoom = isNullOrAll(roomId) ? null : roomId;
-        String filterMovie = isNullOrAll(movieId) ? null : movieId;
+        // Chuẩn hóa bộ lọc: luôn trả về "all" nếu rỗng/null
+        String filterRoom = normalizeFilter(roomId);
+        String filterMovie = normalizeFilter(movieId);
 
-        // 3. Lấy dữ liệu KPI (Lấy index 4 là activeMovies từ SQL)
         List<Object[]> kpiRows = analyticsRepository.getKpiSummary(startDate, endDate, filterRoom, filterMovie);
         Object[] kpiResult = (kpiRows != null && !kpiRows.isEmpty()) ? kpiRows.get(0) : new Object[7];
 
@@ -40,7 +38,6 @@ public class AnalyticsService {
                 .totalShows(toLong(kpiResult, 6))
                 .build();
 
-        // 4. Lấy dữ liệu các biểu đồ (Charts)
         boolean isSingleDay = period != null && (period.equalsIgnoreCase("1d") || period.equalsIgnoreCase("today"));
 
         List<Object[]> revenueRows = isSingleDay
@@ -75,44 +72,47 @@ public class AnalyticsService {
                 .topCombos(topCombos)
                 .build();
 
-        // 5. Lấy dữ liệu các bảng (Tables)
         List<TopMovieRow> topMovies = safeList(analyticsRepository.getTopMovies(startDate, endDate)).stream()
                 .map(r -> new TopMovieRow(
-                        toStringVal(r, 0), // m.id
-                        toStringVal(r, 1), // m.title
-                        toLong(r, 2),      // ticketsSold
-                        toDouble(r, 3)     // totalRevenue
+                        toStringVal(r, 0),
+                        toStringVal(r, 1),
+                        toLong(r, 2),
+                        toDouble(r, 3)
                 ))
                 .toList();
 
         List<RoomDetailRow> roomDetails = safeList(analyticsRepository.getRoomDetails(startDate, endDate)).stream()
                 .map(r -> new RoomDetailRow(
-                        toStringVal(r, 0), // roomId
-                        toStringVal(r, 1), // roomName
-                        toLong(r, 2),      // totalSeats
-                        toLong(r, 3),      // totalShows
-                        toLong(r, 4),      // ticketsSold
-                        toDouble(r, 5)     // totalRevenue
+                        toStringVal(r, 0),
+                        toStringVal(r, 1),
+                        toLong(r, 2),
+                        toLong(r, 3),
+                        toLong(r, 4),
+                        toDouble(r, 5)
                 ))
                 .toList();
 
-        List<RecentTransactionRow> recentTransactions = safeList(analyticsRepository.getRecentTransactions()).stream()
+        List<RecentTransactionRow> recentTransactions = safeList(
+                analyticsRepository.getRecentTransactions(startDate, endDate, filterRoom, filterMovie)
+        ).stream()
                 .map(r -> new RecentTransactionRow(
-                        toStringVal(r, 0), // code
-                        toStringVal(r, 1), // time
-                        toStringVal(r, 2), // customer
-                        toStringVal(r, 3), // movie
-                        toDouble(r, 4)     // total
+                        toStringVal(r, 0),
+                        toStringVal(r, 1),
+                        toStringVal(r, 2),
+                        toStringVal(r, 3),
+                        toDouble(r, 4)
                 ))
                 .toList();
 
-        List<UpcomingShowtimeRow> upcomingShowtimes = safeList(analyticsRepository.getUpcomingShowtimes()).stream()
+        List<UpcomingShowtimeRow> upcomingShowtimes = safeList(
+                analyticsRepository.getUpcomingShowtimes(filterRoom, filterMovie)
+        ).stream()
                 .map(r -> new UpcomingShowtimeRow(
-                        toStringVal(r, 0), // time
-                        toStringVal(r, 1), // movie
-                        toStringVal(r, 2), // room
-                        toLong(r, 3),      // sold
-                        toLong(r, 4)       // total
+                        toStringVal(r, 0),
+                        toStringVal(r, 1),
+                        toStringVal(r, 2),
+                        toLong(r, 3),
+                        toLong(r, 4)
                 ))
                 .toList();
 
@@ -123,7 +123,6 @@ public class AnalyticsService {
                 .upcomingShowtimes(upcomingShowtimes)
                 .build();
 
-        // 6. Gom kết quả vào DTO chính
         return DashboardAnalyticsDTO.builder()
                 .kpi(kpi)
                 .charts(charts)
@@ -144,13 +143,17 @@ public class AnalyticsService {
             case "30d" -> startDate = today.minusDays(29);
             case "month" -> startDate = today.withDayOfMonth(1);
             case "1y", "year" -> startDate = today.withDayOfYear(1);
+            case "all" -> startDate = LocalDate.of(2000, 1, 1);
             default -> startDate = today.minusDays(6);
         }
         return new LocalDate[]{startDate, today};
     }
 
-    private boolean isNullOrAll(String str) {
-        return str == null || str.trim().isEmpty() || "all".equalsIgnoreCase(str.trim());
+    private String normalizeFilter(String str) {
+        if (str == null || str.trim().isEmpty() || "null".equalsIgnoreCase(str.trim())) {
+            return "all";
+        }
+        return str.trim();
     }
 
     private <T> List<T> safeList(List<T> list) {

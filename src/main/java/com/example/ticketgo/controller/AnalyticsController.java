@@ -14,19 +14,17 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
-
     @GetMapping("/analytics")
     public String showAnalyticsPage() {
         return "Analytics";
     }
 
-
     @GetMapping("/api/analytics")
     @ResponseBody
     public ResponseEntity<DashboardAnalyticsDTO> getAnalytics(
-            @RequestParam(defaultValue = "7d") String period,
-            @RequestParam(defaultValue = "all") String roomId,
-            @RequestParam(defaultValue = "all") String movieId) {
+            @RequestParam(required = false, defaultValue = "7d") String period,
+            @RequestParam(required = false, defaultValue = "all") String roomId,
+            @RequestParam(required = false, defaultValue = "all") String movieId) {
 
         DashboardAnalyticsDTO data = analyticsService.getDashboardData(period, roomId, movieId);
         return ResponseEntity.ok(data);
