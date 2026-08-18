@@ -11,23 +11,7 @@
 </head>
 <body>
 
-<div class="sidebar">
-    <div class="brand">
-        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
-    </div>
-    <div class="nav flex-column">
-        <a href="#" class="nav-link"><i class="fa-solid fa-gauge"></i> Trang tổng quan</a>
-        <hr class="text-secondary mx-3 my-2">
-        <a href="/" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
-        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
-        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
-        <a href="/view" class="nav-link acitve"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
-        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
-        <a href="/customers" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
-        <a href="/admin/ticket-desk" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
-        <a href="/analytics" class="nav-link"><i class="fa-solid fa-ticket"></i> Thống kê doanh số</a>
-    </div>
-</div>
+<div th:replace="~{sidebar :: sidebarFragment}"></div>
 
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-5">
@@ -304,6 +288,26 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="deleteConfirmModalLabel">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>Xác nhận xóa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="mb-0 fs-5">Bạn có chắc chắn muốn xóa phòng chiếu này không?</p>
+                <small class="text-danger">Hành động này không thể hoàn tác!</small>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="executeDeleteRoom()">Xác nhận Xóa</button>
+            </div>
         </div>
     </div>
 </div>

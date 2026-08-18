@@ -26,7 +26,7 @@ public class FilmController {
     private final CategoryRepository categoryRepository;
     private final StorageService storageService;
 
-    @GetMapping("/")
+    @GetMapping("/film")
     public String index(Model model) {
         List<Film> listPhim = filmService.getAllFilms();
         model.addAttribute("films", listPhim);
@@ -75,7 +75,7 @@ public class FilmController {
 
         filmRepository.save(film);
 
-        return "redirect:/";
+        return "redirect:/film";
     }
 
     @PostMapping("/films/edit")

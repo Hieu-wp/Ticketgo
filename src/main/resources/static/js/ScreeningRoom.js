@@ -299,6 +299,7 @@ async function loadScreeningRooms() {
                         </div>
 
                         <!-- Chặn thao tác khác, chỉ giữ lại nút bấm bảo trì để hoàn tất -->
+
                         <div class="d-flex gap-2 mt-3">
                             <button class="btn btn-light btn-sm text-secondary w-100 fw-semibold"
                                     onclick="editScreeningRoom('${room.id}')" ${isMaintenance ? 'disabled' : ''}>
@@ -309,6 +310,10 @@ async function loadScreeningRooms() {
                                 <i class="fa-solid ${isMaintenance ? 'fa-check' : 'fa-screwdriver-wrench'} me-1"></i>
                                 ${isMaintenance ? 'Hoàn tất' : 'Bảo trì'}
                             </button>
+                           <button class="btn btn-danger btn-sm fw-semibold w-100"
+                                   onclick="openDeleteModal('${room.id}')" ${isMaintenance ? 'disabled' : ''}>
+                               <i class="fa-solid fa-trash me-1"></i> Xóa
+                           </button>
                         </div>
                     </div>
                 </div>
@@ -548,16 +553,33 @@ async function updateScreeningRoom(roomId) {
 }
 
 //  Xóa phòng chiếu
-async function deleteScreeningRoom(roomId) {
-    if (!confirm('Bạn có chắc chắn muốn xóa phòng chiếu này?')) return;
+// Biến lưu trữ ID phòng đang chờ xóa
+let currentDeleteRoomId = null;
+
+// Hàm mở Modal xác nhận xóa
+function openDeleteModal(roomId) {
+    currentDeleteRoomId = roomId;
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal'));
+    modalInstance.show();
+}
+
+// Hàm thực thi xóa khi bấm "Xác nhận Xóa" trên Modal
+async function executeDeleteRoom() {
+    if (!currentDeleteRoomId) return;
 
     try {
-        const response = await fetch(`${API_URL}/${roomId}`, {
+        const response = await fetch(`${API_URL}/${currentDeleteRoomId}`, {
             method: 'DELETE'
         });
 
+        // Ẩn modal đi ngay sau khi có phản hồi
+        const modalElement = document.getElementById('deleteConfirmModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) modalInstance.hide();
+
         if (response.ok) {
-            const cardElement = document.getElementById(`room-card-${roomId}`);
+            // Xóa thẻ phòng trên giao diện mà không cần load lại toàn bộ
+            const cardElement = document.getElementById(`room-card-${currentDeleteRoomId}`);
             if (cardElement) {
                 cardElement.remove();
             } else {
@@ -571,6 +593,8 @@ async function deleteScreeningRoom(roomId) {
     } catch (error) {
         console.error('Lỗi khi xóa phòng chiếu:', error);
         showNotify('Lỗi Kết Nối!', 'Không thể kết nối tới Server.', false);
+    } finally {
+        currentDeleteRoomId = null; // Reset lại biến sau khi hoàn tất
     }
 }
 

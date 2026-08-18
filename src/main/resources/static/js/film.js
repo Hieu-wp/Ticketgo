@@ -160,19 +160,8 @@ function previewBanner(input) {
 }
 
 
-// 4. UPLOAD ẢNH LÊN SUPABASE
-
-async function uploadToSupabaseStorage(file, folder = 'posters') {
-    if (!file) return null;
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-
-    const { data: uploadData, error: uploadError } = await supabase.storage.from('movies').upload(fileName, file);
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage.from('movies').getPublicUrl(fileName);
-    return urlData.publicUrl;
-}
+// 4. (Đã xoá) Upload ảnh giờ được xử lý hoàn toàn ở backend Java (StorageService -> Supabase),
+// browser chỉ cần gửi file gốc qua multipart/form-data như bình thường.
 
 
 // 5. NẠP DROPDOWN DANH MỤC VÀ ĐỘ TUỔI ĐỘNG
@@ -261,22 +250,9 @@ window.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
 
             try {
-                const posterFileInput = document.getElementById('poster-file-input');
-                const bannerFileInput = document.getElementById('banner-file-input');
-
-                let posterUrl = "";
-                let bannerUrl = "";
-
-                if (posterFileInput && posterFileInput.files[0]) {
-                    posterUrl = await uploadToSupabaseStorage(posterFileInput.files[0], 'posters');
-                }
-                if (bannerFileInput && bannerFileInput.files[0]) {
-                    bannerUrl = await uploadToSupabaseStorage(bannerFileInput.files[0], 'banners');
-                }
-
+                // File poster/banner được gửi nguyên trong FormData (multipart),
+                // backend (FilmController -> StorageService) sẽ tự upload lên Supabase.
                 const formData = new FormData(addForm);
-                if (posterUrl) formData.set('poster_url', posterUrl);
-                if (bannerUrl) formData.set('banner_url', bannerUrl);
 
                 const response = await fetch('/films/add', {
                     method: 'POST',
@@ -306,18 +282,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
 
                 try {
+                    // File poster/banner được gửi nguyên trong FormData (multipart),
+                    // backend (FilmController -> StorageService) sẽ tự upload lên Supabase.
                     const formData = new FormData(editForm);
-                    const posterFileInput = document.getElementById('imageUpload');
-                    const bannerFileInput = document.getElementById('bannerUpload');
-
-                    if (posterFileInput && posterFileInput.files[0]) {
-                        const newPosterUrl = await uploadToSupabaseStorage(posterFileInput.files[0], 'posters');
-                        formData.set('poster_url', newPosterUrl);
-                    }
-                    if (bannerFileInput && bannerFileInput.files[0]) {
-                        const newBannerUrl = await uploadToSupabaseStorage(bannerFileInput.files[0], 'banners');
-                        formData.set('banner_url', newBannerUrl);
-                    }
 
                     const response = await fetch('/films/edit', {
                         method: 'POST',

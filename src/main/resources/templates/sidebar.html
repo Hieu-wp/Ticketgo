@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<style>
+    body {
+          font-family: 'Inter', sans-serif;
+          background-color: var(--light-bg);
+          color: #1e293b;
+      }
+
+      .sidebar {
+          height: 100vh;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 260px;
+          background: #0f0c29;
+          color: #fff;
+          padding-top: 20px;
+          z-index: 100;
+      }
+
+      .sidebar .brand {
+          padding: 10px 25px;
+          font-size: 1.25rem;
+          font-weight: 700;
+          background: var(--purple-radiant);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          margin-bottom: 30px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+      }
+
+      /* Khối Avatar: căn giữa theo chiều dọc */
+      .user-profile {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 0 20px 25px;
+          margin-bottom: 15px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      /* Avatar hình tròn, kích thước cố định, ảnh không méo */
+      .avatar-img {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid rgba(168, 85, 247, 0.5);
+          margin-bottom: 10px;
+      }
+
+      .user-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          /* Giới hạn chiều rộng để text dài bị cắt đúng vùng, không tràn ra ngoài sidebar */
+          max-width: 100%;
+          min-width: 0;
+      }
+
+      /* Tên user: 1 dòng, dài quá thì hiện dấu ... thay vì tràn hoặc xuống dòng */
+      .user-name {
+          width: 100%;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #fff;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+
+      /* Vai trò user: tương tự, cắt gọn nếu dài */
+      .user-role {
+          width: 100%;
+          font-size: 0.8rem;
+          color: #94a3b8;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+
+      .sidebar .nav-link {
+          color: #94a3b8;
+          padding: 12px 25px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+      }
+
+      .sidebar .nav-link.active {
+          color: #fff;
+          background: rgba(168, 85, 247, 0.15);
+          border-left: 4px solid var(--neon-purple);
+      }
+</style>
+<body>
+
+<!-- Khai báo Fragment đặt tên là "sidebarFragment" -->
+<div th:fragment="sidebarFragment" class="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-chart-pie"></i> CINEASTRA CONTROL
+    </div>
+
+    <!-- Khối Avatar -->
+    <div class="user-profile">
+        <img id="userAvatar" src="https://ui-avatars.com/api/?name=User" alt="Avatar" class="avatar-img">
+        <div class="user-info">
+            <span id="sidebarUserName" class="user-name">Loading...</span>
+            <span id="sidebarUserRole" class="user-role">...</span>
+        </div>
+    </div>
+
+    <!-- Thanh Menu -->
+    <div class="nav flex-column">
+
+        <a href="/film" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý phim</a>
+        <a href="/categories" class="nav-link "><i class="fa-solid fa-clapperboard"></i> Quản lý danh mục</a>
+        <a href="#" class="nav-link"><i class="fa-solid fa-ticket"></i> Quản lý khuyến mãi</a>
+        <a href="/view" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý phòng chiếu</a>
+        <a href="/showtime" class="nav-link "><i class="fa-solid fa-calendar-days"></i> Quản lý lịch chiếu</a>
+        <a href="/customers" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
+        <a href="/admin/ticket-desk" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý thanh toán</a>
+        <a href="/analytics" class="nav-link"><i class="fa-solid fa-ticket"></i> Thống kê doanh số</a>
+    </div>
+
+    <!-- Nhúng trực tiếp file JS xử lý vào đây -->
+    <script th:src="@{/js/sidebar.js}"></script>
+</div>
+
+</body>
+</html>
