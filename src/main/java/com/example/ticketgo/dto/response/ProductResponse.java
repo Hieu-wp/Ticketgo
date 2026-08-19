@@ -11,4 +11,5 @@ public class ProductResponse {
     private String type;
     private Double costPrice;
     private Double sellPrice;
+    private Integer quantity;
 }

@@ -1,6 +1,5 @@
 package com.example.ticketgo.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,7 +23,7 @@ public class Product {
     private String name;
 
     @Column(nullable = false)
-    private String type; // Lưu chuỗi thường: "POPCORN", "DRINK"
+    private String type; // "POPCORN", "DRINK"
 
     @Column(name = "cost_price", nullable = false)
     @Builder.Default
@@ -33,6 +32,10 @@ public class Product {
     @Column(name = "sell_price", nullable = false)
     @Builder.Default
     private Double sellPrice = 0.0;
+
+    @Column(name = "quantity", nullable = false)
+    @Builder.Default
+    private Integer quantity = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

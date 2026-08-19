@@ -12,4 +12,5 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 
     // Tìm sản phẩm theo loại (VD: 'POPCORN' hoặc 'DRINK')
     List<Product> findByType(String type);
+    boolean existsByNameIgnoreCaseAndType(String name, String type);
 }

@@ -1,6 +1,5 @@
 package com.example.ticketgo.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,16 +29,20 @@ public class Combo {
     @JoinColumn(name = "popcorn_id")
     private Product popcorn;
 
-    // Liên kết đến danh sách Sản phẩm loại Nước qua bảng trung gian combo_drinks
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
+    // Số lượng bắp trong combo
+    @Column(name = "popcorn_quantity", nullable = false)
+    @Builder.Default
+    private Integer popcornQuantity = 1;
+
+    // Giữ nguyên bảng trung gian combo_drinks nhưng lưu thêm cột quantity
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
             name = "combo_drinks",
             schema = "public",
-            joinColumns = @JoinColumn(name = "combo_id"),
-            inverseJoinColumns = @JoinColumn(name = "product_id")
+            joinColumns = @JoinColumn(name = "combo_id")
     )
     @Builder.Default
-    private List<Product> drinks = new ArrayList<>();
+    private List<ComboDrink> drinks = new ArrayList<>();
 
     @Column(name = "total_price", nullable = false)
     @Builder.Default

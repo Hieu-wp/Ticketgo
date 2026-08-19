@@ -667,3 +667,22 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
 }
+/* Ghế quầy COUNTER hoặc Ghế App ĐÃ CHECK MÃ -> Màu Xanh lá */
+.seat-preview-box.sold {
+  background-color: #22c55e !important;
+  color: #ffffff;
+}
+
+/* Ghế Đặt qua APP chưa check mã -> Màu Xanh dương */
+.seat-preview-box.app-booked {
+  background-color: #2563eb !important;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+/* Ghế check mã thành công -> Xanh lá viền vàng */
+.seat-preview-box.highlight-checked {
+  background-color: #16a34a !important;
+  border: 2px solid #facc15;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+}

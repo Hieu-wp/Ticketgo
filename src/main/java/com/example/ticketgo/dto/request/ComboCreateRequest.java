@@ -12,9 +12,20 @@ public class ComboCreateRequest {
     @NotBlank(message = "Tên combo không được để trống")
     private String name;
 
-    @NotBlank(message = "Vui lòng chọn 1 loại bắp")
-    private String popcornId; // ID Bắp dạng String (UUID)
+    @NotBlank(message = "Vui lòng chọn bắp")
+    private String popcornId;
+
+    private Integer popcornQuantity;
 
     @NotEmpty(message = "Vui lòng chọn ít nhất 1 loại nước")
-    private List<String> drinkIds; // Danh sách ID Nước dạng String
+    private List<ComboDrinkItem> drinks;
+
+    // Bổ sung nhận giá combo từ giao diện
+    private Double comboPrice;
+
+    @Data
+    public static class ComboDrinkItem {
+        private String productId;
+        private Integer quantity;
+    }
 }

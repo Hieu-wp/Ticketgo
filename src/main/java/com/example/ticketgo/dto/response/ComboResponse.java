@@ -11,6 +11,14 @@ public class ComboResponse {
     private String id;
     private String name;
     private ProductResponse popcorn;
-    private List<ProductResponse> drinks;
+    private Integer popcornQuantity;
+    private List<ComboDrinkResponse> drinks;
     private Double totalPrice;
+
+    @Data
+    @Builder
+    public static class ComboDrinkResponse {
+        private ProductResponse product;
+        private Integer quantity;
+    }
 }

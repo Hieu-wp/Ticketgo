@@ -72,4 +72,14 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     @Modifying
     @Query("DELETE FROM Ticket t WHERE t.status = 'HOLDING' AND t.holdExpiresAt <= :now")
     int deleteExpiredHoldingTickets(@Param("now") LocalDateTime now);
+
+    // Thêm truy vấn tìm vé linh hoạt theo Mã vé hoặc Mã đặt chỗ (Booking Code)
+    @Query("""
+    SELECT t FROM Ticket t 
+    LEFT JOIN t.booking b 
+    WHERE t.id = :code 
+       OR t.ticketCode = :code 
+       OR b.bookingCode = :code
+""")
+    List<Ticket> findByAnyCode(@Param("code") String code);
 }

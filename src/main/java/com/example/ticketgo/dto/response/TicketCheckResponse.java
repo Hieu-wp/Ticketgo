@@ -28,4 +28,6 @@ public class TicketCheckResponse {
     private Double price;
     private LocalDateTime createdAt;
     private String showtimeId;
+    private String ticketCode;
+    private String paymentMethod; // 'APP' hoặc 'COUNTER'
 }

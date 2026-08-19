@@ -354,3 +354,18 @@
             display: block;
             opacity: 1;
         }
+      /* 1. Ghế đặt qua APP -> Màu Xanh dương */
+      .seat-btn.app-ticket,
+      .seat-btn.sold.app-ticket {
+          background-color: #2563eb !important;
+          color: #ffffff !important;
+          border: none !important;
+      }
+
+      /* 2. Ghế bán tại QUẦY -> Màu Xanh lá */
+      .seat-btn.counter-ticket,
+      .seat-btn.sold.counter-ticket {
+          background-color: #22c55e !important;
+          color: #ffffff !important;
+          border: none !important;
+      }

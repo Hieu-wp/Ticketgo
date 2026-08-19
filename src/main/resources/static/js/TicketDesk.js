@@ -413,8 +413,8 @@ async function onRoomFilterChange(roomId) {
    state.occupiedSeats = roomData.soldSeats || [];
    state.occupiedDetails = {};
 
-   if (Array.isArray(roomData.seatDetails)) {   // sửa res -> roomData
-     roomData.seatDetails.forEach(d => {
+   if (Array.isArray(res.seatDetails)) {
+     res.seatDetails.forEach(d => {
        const key = String(d.seatCode).trim().toUpperCase();
        state.occupiedDetails[key] = {
          customerName: d.customerName,
@@ -423,9 +423,8 @@ async function onRoomFilterChange(roomId) {
          seatType: d.seatType,
          ticketPrice: d.ticketPrice,
          bookingCode: d.bookingCode,
-         comboName: d.comboName,
-         comboPrice: d.comboPrice,
-         totalAmount: d.totalAmount
+         paymentMethod: d.paymentMethod || 'COUNTER', // 'APP' hoặc 'COUNTER'
+         isVerified: d.isVerified || false
        };
      });
    }
@@ -576,9 +575,8 @@ state.highlightSeat = null;
           seatType: d.seatType,
           ticketPrice: d.ticketPrice,
           bookingCode: d.bookingCode,
-          comboName: d.comboName,
-          comboPrice: d.comboPrice,
-          totalAmount: d.totalAmount
+          paymentMethod: d.paymentMethod || 'COUNTER', // 'APP' hoặc 'COUNTER'
+          isVerified: d.isVerified || false
         };
       });
     }
@@ -596,7 +594,7 @@ state.highlightSeat = null;
 
 function renderSeatMap(canSelect = true) {
   if (!state.selectedShowtime || !state.seatLayout) return;
-  console.log(state.seatLayout)
+
   const { rows, cols, hasAisle, vipSeats, seatCodeMap } = parseRoomLayout(state.seatLayout);
   const vipSeatsSet = new Set(vipSeats.map(v => String(v).toUpperCase()));
 
@@ -653,12 +651,19 @@ function renderSeatMap(canSelect = true) {
       const isVipSeat = vipSeatsSet.has(seatId);
       const isHighlighted = state.highlightSeat === seatId;
 
+      // Lấy chi tiết thông tin thanh toán của ghế
+      const seatDetail = state.occupiedDetails[seatId] || {};
+      const isAppPending = isOccupied && seatDetail.paymentMethod === 'APP';
+
       let cls = 'seat-preview-box seat';
       let content = seatId;
 
       if (isHighlighted) {
-        cls += ' highlight-checked';   // class CSS mới, cần thêm style riêng (ví dụ viền vàng nhấp nháy)
+        cls += ' highlight-checked';
         content = `${seatId} <i class="fa-solid fa-user-check ms-1"></i>`;
+      } else if (isAppPending) {
+        cls += ' app-booked';
+        content = `${seatId} <i class="fa-solid fa-mobile-screen-button ms-1"></i>`;
       } else if (isOccupied) {
         cls += ' sold';
         content = `${seatId} <i class="fa-solid fa-check ms-1"></i>`;
@@ -681,11 +686,10 @@ function renderSeatMap(canSelect = true) {
       <div class="seat-legend d-flex justify-content-center gap-3 mt-3 flex-wrap">
         <div class="legend-item"><span class="legend-box normal"></span> Ghế thường</div>
         <div class="legend-item"><span class="legend-box vip" style="background-color:#f59e0b;"></span> Ghế VIP</div>
-        <div class="legend-item"><span class="legend-box sold" style="background-color:#22c55e;"></span> Đã chọn</div>
-        <div class="legend-item"><span class="legend-box selected" style="background-color:#3b82f6;"></span> Đặt trước</div>
+        <div class="legend-item"><span class="legend-box sold" style="background-color:#22c55e;"></span> Đã thanh toán (Quầy/Đã soát)</div>
+        <div class="legend-item"><span class="legend-box app-booked" style="background-color:#2563eb;"></span> Đặt qua App</div>
       </div>
     `;
-
 
   if (container) container.innerHTML = html;
   updateSeatLabels();
@@ -1054,7 +1058,7 @@ async function createTicket(e) {
           </div>
 
           <div style="grid-column: span 2; background: #f3e8ff; padding: 8px; border-radius: 6px;">
-            <span style="color: #6b21a8; font-size: 0.8rem; font-weight: bold;">Mã vé từng ghế (Soát vé tại cửa):</span>
+            <span style="color: #6b21a8; font-size: 0.8rem; font-weight: bold;">Mã vé từng ghế :</span>
             <div style="font-size: 0.95rem; margin-top: 2px;">${ticketDetailsList}</div>
           </div>
 
@@ -1101,7 +1105,7 @@ async function checkTicket() {
   const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
   if (!code) {
-    showAppModal('Cảnh báo', 'Vui lòng nhập Mã vé!');
+    showAppModal('Cảnh báo', 'Vui lòng nhập Mã vé hoặc Mã đặt chỗ!');
     return;
   }
 
@@ -1112,26 +1116,24 @@ async function checkTicket() {
   const details = document.getElementById('result-details');
 
   try {
-    // Gọi endpoint gộp — chỉ 1 lần round-trip, lấy đủ cả vé + sơ đồ phòng
     const response = await apiRequest(`/counter/tickets/locate?code=${encodeURIComponent(code)}`);
     const result = response.ticket;
     const seatMapData = response.seatMap;
+
+    const originalMethod = (result.paymentMethod || 'COUNTER').toUpperCase();
+    const isAppTicket = originalMethod === 'APP';
 
     if (resultBox) {
       resultBox.style.display = 'block';
       resultBox.className = 'result-box valid';
     }
-    if (statusText) {
-      statusText.innerHTML = '<i class="fa-solid fa-circle-check me-2" style="color:#059669;"></i>Vé hợp lệ';
-      statusText.style.color = '#059669';
-    }
-    if (badge) badge.innerHTML = '<span class="badge-valid" style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:6px; font-weight:600;">HỢP LỆ</span>';
-    if (resultCode) resultCode.textContent = 'Mã vé: ' + (result.ticketCode || result.ticketId);
+
+    if (resultCode) resultCode.textContent = 'Mã: ' + (result.ticketCode || result.ticketId || code);
 
     if (details) {
       details.innerHTML = `
-        <div class="col-6"><small class="text-muted">Mã Vé</small><div class="fw-bold">${result.ticketCode || result.ticketId}</div></div>
-        <div class="col-6"><small class="text-muted">Trạng thái</small><div class="fw-semibold" style="color:#059669;">${result.status}</div></div>
+        <div class="col-6"><small class="text-muted">Mã Vé / Đơn</small><div class="fw-bold">${result.ticketCode || result.ticketId}</div></div>
+        <div class="col-6"><small class="text-muted">Hình thức</small><div class="fw-bold" style="color:${isAppTicket ? '#2563eb' : '#059669'};">${isAppTicket ? 'Đặt qua APP' : 'Mua tại Quầy'}</div></div>
         <div class="col-6"><small class="text-muted">Khách hàng</small><div class="fw-semibold">${result.customerName} - ${result.customerPhone}</div></div>
         <div class="col-6"><small class="text-muted">Phim</small><div class="fw-semibold">${result.movieTitle}</div></div>
         <div class="col-6"><small class="text-muted">Ghế / Phòng</small><div class="fw-semibold">${result.seatNumber} (${result.roomName})</div></div>
@@ -1140,7 +1142,24 @@ async function checkTicket() {
       `;
     }
 
-    // Cập nhật state để hiển thị đúng sơ đồ phòng của vé này, đồng thời tô sáng ghế
+    if (isAppTicket) {
+      if (statusText) {
+        statusText.innerHTML = '<i class="fa-solid fa-circle-check me-2" style="color:#059669;"></i>Soát vé APP thành công';
+        statusText.style.color = '#059669';
+      }
+      if (badge) badge.innerHTML = '<span class="badge-valid" style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:6px; font-weight:600;">HỢP LỆ (APP)</span>';
+
+      showAppModal('Vé Hợp Lệ (APP)', `Mã đặt chỗ <b>${code}</b> (Đặt qua App) hợp lệ!.`);
+    } else {
+      if (statusText) {
+        statusText.innerHTML = '<i class="fa-solid fa-circle-info me-2" style="color:#2563eb;"></i>Vé mua tại quầy';
+        statusText.style.color = '#2563eb';
+      }
+      if (badge) badge.innerHTML = '<span class="badge-valid" style="background:#dbeafe; color:#1e40af; padding:4px 8px; border-radius:6px; font-weight:600;">VÉ QUẦY</span>';
+
+      showAppModal('Thông Tin Vé', `Mã vé <b>${code}</b> là vé mua trực tiếp tại quầy.<br>Thông tin vé đã được kiểm tra thành công!`);
+    }
+
     locateAndHighlightSeat(seatMapData, result.seatNumber, result);
 
   } catch (err) {
@@ -1154,7 +1173,9 @@ async function checkTicket() {
     }
     if (badge) badge.innerHTML = '<span class="badge-invalid" style="background:#fee2e2; color:#991b1b; padding:4px 8px; border-radius:6px; font-weight:600;">KHÔNG HỢP LỆ</span>';
     if (resultCode) resultCode.textContent = 'Mã: ' + code;
-    if (details) details.innerHTML = `<div class="col-12 text-muted">${err.message || 'Mã vé không tồn tại hoặc đã bị hủy.'}</div>`;
+    if (details) details.innerHTML = `<div class="col-12 text-muted">${err.message || 'Mã vé/mã đặt chỗ không tồn tại hoặc đã bị hủy.'}</div>`;
+
+    showAppModal('Mã Vé Không Hợp Lệ', `Mã vé hoặc mã đặt chỗ <b>${code}</b> không hợp lệ hoặc không tồn tại trên hệ thống!`);
   }
 }
 function locateAndHighlightSeat(seatMapData, seatCode, ticketResult) {
@@ -1178,22 +1199,30 @@ function locateAndHighlightSeat(seatMapData, seatCode, ticketResult) {
   state.occupiedSeats = [...(seatMapData.soldSeats || []), ...(seatMapData.holdingSeats || [])];
   state.occupiedDetails = {};
 
+  const targetSeat = String(seatCode).trim().toUpperCase();
+
   if (Array.isArray(seatMapData.seatDetails)) {
     seatMapData.seatDetails.forEach(d => {
       const key = String(d.seatCode).trim().toUpperCase();
       state.occupiedDetails[key] = {
         customerName: d.customerName,
         customerPhone: d.customerPhone,
-        ticketCode: d.ticketCode
+        ticketCode: d.ticketCode,
+        seatType: d.seatType,
+        ticketPrice: d.ticketPrice,
+        bookingCode: d.bookingCode,
+        comboName: d.comboName,
+        comboPrice: d.comboPrice,
+        totalAmount: d.totalAmount,
+        paymentMethod: d.paymentMethod || 'COUNTER'
       };
     });
   }
 
-  // Đánh dấu ghế cần tô sáng (khác với "đang chọn" để tránh ảnh hưởng tới việc tính tiền/đặt vé)
-  state.highlightSeat = String(seatCode).trim().toUpperCase();
+  // Đánh dấu viền vàng ghế vừa tra cứu
+  state.highlightSeat = targetSeat;
 
-  renderSeatMap(false); // false = không cho phép bấm chọn ghế mới trong chế độ xem này
-
+  renderSeatMap(false);
 
   document.getElementById('seat-map-area')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

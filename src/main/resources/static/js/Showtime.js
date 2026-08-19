@@ -747,7 +747,6 @@ function renderShowtimeCards() {
     if (!container) return;
     container.innerHTML = "";
 
-    // 1. LỌC DANH SÁCH THEO NGÀY & TRẠNG THÁI
     const filteredList = showtimesDatabase.filter(slot => {
         const slotDate = slot.showDate || slot.date;
         if (dateFilterValue && slotDate !== dateFilterValue) return false;
@@ -762,14 +761,12 @@ function renderShowtimeCards() {
         return true;
     });
 
-    // 2. SẮP XẾP SUẤT CHIẾU THEO GIỜ CHIẾU
     filteredList.sort((a, b) => {
         const timeA = a.startTime || a.time || "00:00";
         const timeB = b.startTime || b.time || "00:00";
         return timeA.localeCompare(timeB);
     });
 
-    // 3. XỬ LÝ KHÔNG CÓ DỮ LIỆU
     if (!filteredList || filteredList.length === 0) {
         const dateFormatted = dateFilterValue ? formatDate(dateFilterValue) : '';
         container.innerHTML = `
@@ -780,31 +777,24 @@ function renderShowtimeCards() {
         return;
     }
 
-    // 4. RENDER DANH SÁCH CARD SUẤT CHIẾU
     filteredList.forEach(slot => {
         const isCompleted = isShowtimeCompleted(slot);
         const isHidden = Boolean(slot.isHidden) || slot.status === 'HIDDEN';
 
-        // Thông tin Phim
         const movieName = slot.movie?.title || slot.movie?.tenPhim || slot.movieTitle || "Phim chưa đặt tên";
         const durationDisplay = slot.movie?.duration || slot.movie?.thoiLuong || slot.duration || 0;
         const posterUrl = slot.movie?.posterUrl || slot.movie?.hinhAnh || slot.posterUrl || '';
-
-        // Thông tin Phòng chiếu
         const roomName = slot.room?.tenPhong || slot.roomName || "Phòng chiếu";
 
-        // TÍNH TỔNG SỐ GHẾ (Lấy từ soLuongGheThuong + soLuongGheVip trong CSDL)
         const gheThuong = Number(slot.room?.soLuongGheThuong || 0);
         const gheVip = Number(slot.room?.soLuongGheVip || 0);
         const totalSeats = (gheThuong + gheVip) || slot.totalSeats || slot.room?.tongSoGhe || 18;
 
-        // ĐẾM SỐ VÉ ĐÃ BÁN (Lấy từ ticketsSold / soVeDaBan từ Backend)
         let ticketsSold = 0;
         if (typeof slot.ticketsSold === 'number') ticketsSold = slot.ticketsSold;
         else if (typeof slot.soVeDaBan === 'number') ticketsSold = slot.soVeDaBan;
         else if (Array.isArray(slot.tickets)) ticketsSold = slot.tickets.length;
 
-        // Combo Badges
         let comboBadgesHtml = "";
         if (Array.isArray(slot.combos)) {
             slot.combos.forEach(c => {
@@ -812,15 +802,12 @@ function renderShowtimeCards() {
             });
         }
 
-        // Giá vé & Thời gian
         const regPrice = slot.regularPrice ? slot.regularPrice.toLocaleString('vi-VN') : '0';
         const vipPercent = slot.vipPercent || 0;
-
         const rawTime = slot.startTime || slot.time || "00:00";
         const timeDisplay = formatTimeToAMPM(rawTime);
         const dateDisplay = formatDate(slot.showDate || slot.date || "2026-08-06");
 
-        // Badge Trạng thái
         let statusBadgeHtml = `<span class="badge bg-success px-2.5 py-1.5 fs-7"><i class="fa-solid fa-circle-check me-1"></i>Đã thiết lập vé</span>`;
         let cardExtraClass = "";
 
@@ -838,65 +825,41 @@ function renderShowtimeCards() {
                      style="cursor: pointer;"
                      onclick="goToShowtimeDetail('${slot.id}')">
                     <div class="row align-items-center g-3">
-
-                        <!-- KHUNG POSTER -->
                         <div class="col-auto">
                             <div class="poster-container shadow-sm rounded-3 overflow-hidden bg-light d-flex align-items-center justify-content-center" style="width: 80px; height: 110px;">
-                                ${posterUrl ?
-                                    `<img src="${posterUrl}" class="w-100 h-100" style="object-fit: cover;" alt="${movieName}">` :
-                                    `<i class="fa-solid fa-film fs-2 text-secondary"></i>`
-                                }
+                                ${posterUrl ? `<img src="${posterUrl}" class="w-100 h-100" style="object-fit: cover;" alt="${movieName}">` : `<i class="fa-solid fa-film fs-2 text-secondary"></i>`}
                             </div>
                         </div>
-
-                        <!-- CỘT THỜI GIAN -->
                         <div class="col-md-2 text-center text-md-start border-end pe-md-3">
                             <span class="badge ${isCompleted ? 'bg-secondary' : 'bg-primary'} fs-6 px-3 py-1.5 rounded-3 mb-2 d-inline-block shadow-sm">${timeDisplay}</span>
                             <div class="small text-muted fw-semibold mb-1"><i class="fa-regular fa-calendar me-1"></i>${dateDisplay}</div>
                             <div class="small text-muted"><i class="fa-regular fa-clock me-1"></i>${durationDisplay} phút</div>
                         </div>
-
-                        <!-- CỘT THÔNG TIN CHÍNH -->
                         <div class="col-md-5 col-lg-6 ps-md-3">
                             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                ${statusBadgeHtml}
-                                ${comboBadgesHtml}
+                                ${statusBadgeHtml} ${comboBadgesHtml}
                             </div>
-
                             <h4 class="fw-bold text-dark mb-1.5 text-truncate">${movieName}</h4>
-
                             <div class="text-secondary fw-semibold small mb-1">
                                 <i class="fa-solid fa-door-open text-muted me-1"></i>Vị trí phòng: <strong>${roomName}</strong>
                             </div>
-
-                            <!-- HIỂN THỊ ĐỘNG SỐ VÉ ĐÃ BÁN / TỔNG SỐ GHẾ PHÒNG -->
                             <div class="ticket-status-text mb-1">
                                 <i class="fa-solid fa-ticket me-1 text-primary"></i>Tình trạng vé:
                                 <strong class="${ticketsSold > 0 ? 'text-primary' : 'text-dark'}">${ticketsSold}/${totalSeats}</strong> ghế
                             </div>
-
-                            <div class="small text-muted">
-                                Giá thường: <strong class="text-dark">${regPrice}đ</strong> · VIP: +${vipPercent}%
-                            </div>
+                            <div class="small text-muted">Giá thường: <strong class="text-dark">${regPrice}đ</strong> · VIP: +${vipPercent}%</div>
                         </div>
-
-                        <!-- CỘT NÚT THAO TÁC -->
                         <div class="col-md-3 col-lg-3 text-md-end d-flex gap-2 justify-content-md-end align-items-center ms-auto" onclick="event.stopPropagation();">
-                            <button class="btn btn-light text-secondary border btn-sm px-3 fw-semibold" onclick="event.stopPropagation(); toggleHideShowtime('${slot.id}')">
-                                <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'} me-1"></i>${isHidden ? 'Hiện' : 'Ẩn'}
-                            </button>
                             <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" ${isCompleted ? 'disabled' : ''} data-bs-toggle="modal" data-bs-target="#unifiedShowtimeModal" onclick="event.stopPropagation(); onOpenShowtimeModal('${slot.id}')">
                                 <i class="fa-solid fa-pen-to-square me-1"></i>Sửa
                             </button>
-                            <button class="btn btn-outline-danger btn-sm px-3 fw-semibold" onclick="event.stopPropagation(); deleteShowtime('${slot.id}')">
+                            <button class="btn btn-outline-danger btn-sm px-3 fw-semibold" ${isCompleted ? 'disabled' : ''} onclick="event.stopPropagation(); deleteShowtime('${slot.id}')">
                                 <i class="fa-solid fa-trash me-1"></i>Xóa
                             </button>
                         </div>
-
                     </div>
                 </div>
             </div>`;
-
         container.insertAdjacentHTML('beforeend', cardHTML);
     });
 }
@@ -927,13 +890,24 @@ async function toggleHideShowtime(id) {
 
 // Xóa suất chiếu
 function deleteShowtime(id) {
+    const slot = showtimesDatabase.find(s => String(s.id) === String(id));
+    if (slot) {
+        let ticketsSold = 0;
+        if (typeof slot.ticketsSold === 'number') ticketsSold = slot.ticketsSold;
+        else if (typeof slot.soVeDaBan === 'number') ticketsSold = slot.soVeDaBan;
+        else if (Array.isArray(slot.tickets)) ticketsSold = slot.tickets.length;
+
+        if (ticketsSold > 0) {
+            return customAlert('Đã có khách hàng đặt ghế, không thể xóa suất chiếu này!', 'Cảnh báo', 'orange');
+        }
+    }
+
     customConfirm(
         `Bạn có chắc chắn muốn xóa suất chiếu không?`,
         async () => {
             try {
                 const response = await fetch(`/api/showtimes/${id}`, { method: 'DELETE' });
                 let result = {};
-
                 const contentType = response.headers.get("content-type");
                 if (contentType && contentType.includes("application/json")) {
                     result = await response.json();
@@ -1029,17 +1003,42 @@ function toggleAddProductForm() {
 }
 
 // Thêm Bắp/Nước mới
+// Thêm Bắp/Nước mới
 async function addNewProduct() {
-    const type = document.getElementById('new-product-type')?.value;
+    const typeSelect = document.getElementById('new-product-type');
+    const type = typeSelect ? typeSelect.value : 'DRINK';
     const name = document.getElementById('new-product-name')?.value?.trim();
-    const costPrice = parseFloat(document.getElementById('new-product-cost')?.value);
-    const sellingPrice = parseFloat(document.getElementById('new-product-sell')?.value);
 
-    if (!name) return customAlert("Vui lòng nhập tên sản phẩm!", "Thiếu thông tin", "orange");
-    if (isNaN(costPrice) || costPrice < 0) return customAlert("Giá nhập không hợp lệ!", "Lỗi", "orange");
-    if (isNaN(sellingPrice) || sellingPrice < 0) return customAlert("Giá bán không hợp lệ!", "Lỗi", "orange");
+    const priceEl = document.getElementById('new-product-price') || document.getElementById('new-product-cost');
+    let rawPrice = priceEl ? priceEl.value : '';
 
-    const payload = { type, name, costPrice, sellPrice: sellingPrice };
+    // Lọc bỏ dấu chấm, phẩy nếu người dùng nhập số dạng 50.000
+    if (typeof rawPrice === 'string') {
+        rawPrice = rawPrice.replace(/\./g, '').replace(/,/g, '');
+    }
+
+    const price = parseFloat(rawPrice);
+    const quantity = parseInt(document.getElementById('new-product-qty')?.value || 0);
+
+    if (!name) {
+        return customAlert("Vui lòng nhập tên sản phẩm!", "Thông báo", "orange");
+    }
+    if (rawPrice === "" || isNaN(price) || price < 0) {
+        return customAlert("Giá sản phẩm không hợp lệ!", "Thông báo", "orange");
+    }
+    if (quantity < 0) {
+        return customAlert("Số lượng tồn không được âm!", "Thông báo", "orange");
+    }
+
+    // Gửi đủ các key giá để Backend luôn Parse thành công
+    const payload = {
+        name: name,
+        type: type,
+        costPrice: price,
+        sellPrice: price,
+        price: price,
+        quantity: quantity
+    };
 
     try {
         const response = await fetch('/api/products', {
@@ -1049,59 +1048,106 @@ async function addNewProduct() {
         });
 
         const result = await response.json();
+
+        // Sửa điều kiện: Chấp nhận cả result.success hoặc result.id (ProductResponse)
         if (response.ok && (result.success || result.id)) {
             customAlert("Thêm sản phẩm thành công!", "Thành công", "success");
-            document.getElementById('new-product-name').value = "";
-            document.getElementById('new-product-cost').value = "";
-            document.getElementById('new-product-sell').value = "";
-            toggleAddProductForm();
+
+            if (document.getElementById('new-product-name')) document.getElementById('new-product-name').value = '';
+            if (priceEl) priceEl.value = '';
+            if (document.getElementById('new-product-qty')) document.getElementById('new-product-qty').value = '1';
+
             fetchProducts();
         } else {
-            customAlert(result.message || "Không thể thêm sản phẩm.", "Lỗi", "danger");
+            customAlert(result.message || "Lỗi thêm sản phẩm!", "Lỗi", "danger");
         }
     } catch (error) {
-        console.error("Lỗi thêm sản phẩm:", error);
-        customAlert("Lỗi kết nối máy chủ!", "Lỗi", "danger");
+        console.error("Lỗi thêm SP:", error);
+        customAlert("Không thể kết nối đến máy chủ!", "Lỗi", "danger");
     }
 }
 
-// Render Danh sách Nước dạng Card Checkbox chuẩn giao diện mẫu 2 (image_0adac1.png)
+
+
+// 1. Render dữ liệu vào 2 Bảng Bắp và Nước
 function renderProductsInComboForm() {
-    const popcornSelect = document.getElementById('combo-popcorn-select');
-    const drinkChecklist = document.getElementById('drink-checklist');
+    const popcornBody = document.getElementById('popcorn-table-body');
+    const drinkBody = document.getElementById('drink-table-body');
 
-    if (popcornSelect) {
-        let popcornHtml = `<option value="" selected disabled>-- Chọn loại bắp --</option>`;
-        const popcorns = systemProducts.filter(p => p.type === 'POPCORN');
-        popcorns.forEach(p => {
-            const price = parseFloat(p.sellPrice || p.sellingPrice || p.giaBan || 0);
-            popcornHtml += `<option value="${p.id}" data-price="${price}">${p.name} (${price.toLocaleString('vi-VN')}đ)</option>`;
-        });
-        popcornSelect.innerHTML = popcornHtml;
-    }
+    const popcorns = systemProducts.filter(p => p.type === 'POPCORN');
+    const drinks = systemProducts.filter(p => p.type === 'DRINK');
 
-    if (drinkChecklist) {
-        let drinkHtml = "";
-        const drinks = systemProducts.filter(p => p.type === 'DRINK');
-        if (drinks.length === 0) {
-            drinkHtml = `<span class="text-muted small">Chưa có sản phẩm Nước nào.</span>`;
-        } else {
-            drinkHtml = `<div class="scrollable-card-list">`;
-            drinks.forEach(d => {
-                const price = parseFloat(d.sellPrice || d.sellingPrice || d.giaBan || 0);
-                drinkHtml += `
-                    <label class="selectable-card" for="chk-drink-${d.id}">
-                        <div class="d-flex align-items-center gap-2">
-                            <input class="form-check-input combo-drink-cb m-0" type="checkbox" value="${d.id}" data-price="${price}" id="chk-drink-${d.id}" onchange="autoCalculateComboPrice()">
-                            <span class="fw-semibold text-dark">${d.name}</span>
-                        </div>
-                        <span class="card-price">${price.toLocaleString('vi-VN')}đ</span>
-                    </label>`;
-            });
-            drinkHtml += `</div>`;
+
+       // Render Bảng Bắp (Dùng radio để bắt buộc chỉ chọn 1 loại)
+       if (popcornBody) {
+           if (popcorns.length === 0) {
+               popcornBody.innerHTML = `<tr><td colspan="5" class="text-muted py-3">Chưa có bắp nào</td></tr>`;
+           } else {
+               popcornBody.innerHTML = popcorns.map(p => `
+                   <tr>
+                       <td>
+                           <input class="form-check-input combo-popcorn-radio" type="radio" name="selectedPopcorn" value="${p.id}" id="chk-popcorn-${p.id}">
+                       </td>
+                       <td class="text-start fw-semibold"><label for="chk-popcorn-${p.id}" class="mb-0 cursor-pointer">${p.name}</label></td>
+                       <td class="fw-semibold">${Number(p.quantity || 0).toLocaleString('vi-VN')}</td>
+                       <td class="fw-bold text-danger">${Number(p.sellPrice || p.costPrice || 0).toLocaleString('vi-VN')}đ</td>
+                       <td>
+                           <button type="button" class="btn btn-link text-danger p-0" onclick="deleteProduct('${p.id}')" title="Xóa">
+                               <i class="fa-solid fa-trash-can"></i>
+                           </button>
+                       </td>
+                   </tr>
+               `).join('');
+           }
+       }
+
+       // Render Bảng Nước (Dùng checkbox để chọn nhiều loại)
+       if (drinkBody) {
+           if (drinks.length === 0) {
+               drinkBody.innerHTML = `<tr><td colspan="5" class="text-muted py-3">Chưa có nước nào</td></tr>`;
+           } else {
+               drinkBody.innerHTML = drinks.map(d => `
+                   <tr>
+                       <td>
+                           <input class="form-check-input combo-drink-cb" type="checkbox" value="${d.id}" id="chk-drink-${d.id}">
+                       </td>
+                       <td class="text-start fw-semibold"><label for="chk-drink-${d.id}" class="mb-0 cursor-pointer">${d.name}</label></td>
+                       <td class="fw-semibold">${Number(d.quantity || 0).toLocaleString('vi-VN')}</td>
+                       <td class="fw-bold text-danger">${Number(d.sellPrice || d.costPrice || 0).toLocaleString('vi-VN')}đ</td>
+                       <td>
+                           <button type="button" class="btn btn-link text-danger p-0" onclick="deleteProduct('${d.id}')" title="Xóa">
+                               <i class="fa-solid fa-trash-can"></i>
+                           </button>
+                       </td>
+                   </tr>
+               `).join('');
+           }
+       }
+   }
+
+
+// Xóa Bắp / Nước
+function deleteProduct(id) {
+    customConfirm("Bạn có chắc chắn muốn xóa sản phẩm này không?", async () => {
+        try {
+            const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            let result = {};
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                result = await response.json();
+            }
+
+            if (response.ok) {
+                customAlert("Xóa sản phẩm thành công!", "Thành công", "success");
+                fetchProducts();
+            } else {
+                customAlert(result.message || "Không thể xóa sản phẩm.", "Lỗi", "danger");
+            }
+        } catch (error) {
+            console.error("Lỗi xóa sản phẩm:", error);
+            customAlert("Đã xảy ra lỗi kết nối với máy chủ!", "Lỗi", "danger");
         }
-        drinkChecklist.innerHTML = drinkHtml;
-    }
+    }, "Xác nhận xóa", "danger", "Xóa ngay");
 }
 
 // Tự động tính tổng giá Combo
@@ -1125,49 +1171,68 @@ function autoCalculateComboPrice() {
     if (comboPriceInput) comboPriceInput.value = totalPrice > 0 ? totalPrice : '';
 }
 
+
 // Tạo Combo mới
-async function addNewCombo() {
-    const comboName = document.getElementById('new-combo-name')?.value?.trim();
-    const popcornId = document.getElementById('combo-popcorn-select')?.value;
-    const comboPrice = parseFloat(document.getElementById('new-combo-price')?.value || 0);
-    const drinkIds = Array.from(document.querySelectorAll('.combo-drink-cb:checked')).map(cb => cb.value);
 
-    if (!comboName) return customAlert("Vui lòng nhập tên Combo!", "Thiếu thông tin", "orange");
-    if (!popcornId) return customAlert("Vui lòng chọn 1 loại Bắp!", "Thiếu thông tin", "orange");
-    if (drinkIds.length === 0) return customAlert("Vui lòng chọn ít nhất 1 loại Nước!", "Thiếu thông tin", "orange");
+ async function addNewCombo() {
+     const comboName = document.getElementById('new-combo-name')?.value?.trim();
+     const comboPrice = parseFloat(document.getElementById('new-combo-price')?.value || 0);
 
-    const payload = {
-        name: comboName,
-        popcornId: popcornId,
-        drinkIds: drinkIds,
-        comboPrice: comboPrice,
-        tongGia: comboPrice
-    };
+     // Lấy bắp được chọn
+     const selectedPopcornRadio = document.querySelector('.combo-popcorn-radio:checked');
+     if (!selectedPopcornRadio) return customAlert("Vui lòng chọn 1 loại Bắp!", "Thông báo", "orange");
+     const popcornId = selectedPopcornRadio.value;
 
-    try {
-        const response = await fetch('/api/combos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+     // Lấy các nước được chọn
+     const drinks = [];
+     document.querySelectorAll('.combo-drink-cb:checked').forEach(cb => {
+         drinks.push({
+             productId: cb.value,
+             quantity: 1
+         });
+     });
 
-        const result = await response.json();
-        if (response.ok && (result.success || result.id)) {
-            customAlert("Tạo Combo thành công!", "Thành công", "success");
-            document.getElementById('new-combo-name').value = "";
-            document.getElementById('combo-popcorn-select').value = "";
-            document.querySelectorAll('.combo-drink-cb').forEach(cb => cb.checked = false);
-            autoCalculateComboPrice();
-            fetchCombos();
-        } else {
-            customAlert(result.message || "Không thể tạo Combo.", "Lỗi", "danger");
-        }
-    } catch (error) {
-        console.error("Lỗi thêm Combo:", error);
-        customAlert("Lỗi kết nối máy chủ!", "Lỗi", "danger");
-    }
-}
+     if (!comboName) return customAlert("Vui lòng nhập tên Combo!", "Thông báo", "orange");
+     if (drinks.length === 0) return customAlert("Vui lòng chọn ít nhất 1 loại Nước!", "Thông báo", "orange");
+     if (isNaN(comboPrice) || comboPrice <= 0) return customAlert("Vui lòng nhập giá Combo hợp lệ!", "Thông báo", "orange");
 
+     const payload = {
+         name: comboName,
+         popcornId: popcornId,
+         popcornQuantity: 1,
+         drinks: drinks,
+         comboPrice: comboPrice
+     };
+
+     try {
+         const response = await fetch('/api/combos', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(payload)
+         });
+
+         const result = await response.json();
+         if (response.ok && (result.success || result.id)) {
+             customAlert("Tạo Combo thành công!", "Thành công", "success");
+             document.getElementById('new-combo-name').value = "";
+             document.getElementById('new-combo-price').value = "";
+
+             // Reset lựa chọn
+             selectedPopcornRadio.checked = false;
+
+             document.querySelectorAll('.combo-drink-cb').forEach(cb => {
+                 cb.checked = false;
+             });
+
+             fetchCombos();
+         } else {
+             customAlert(result.message || "Không thể tạo Combo.", "Lỗi", "danger");
+         }
+     } catch (error) {
+         console.error("Lỗi tạo Combo:", error);
+         customAlert("Không thể kết nối đến máy chủ!", "Lỗi", "danger");
+     }
+ }
 // Render Danh sách Combo đã cấu hình
 function renderComboList() {
     const container = document.getElementById('combo-list-container');

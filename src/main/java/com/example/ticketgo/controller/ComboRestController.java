@@ -42,4 +42,16 @@ public class ComboRestController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCombo(@PathVariable String id) {
+        try {
+            comboService.deleteCombo(id);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Xóa combo thành công!"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }

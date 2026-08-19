@@ -35,7 +35,7 @@ async function initShowtimeDetailPage() {
         return;
     }
 
-    toggleLoading(true); // Hiện loading ngay lập tức
+    toggleLoading(true);
 
     try {
         const res = await apiRequest(`/counter/seat-map/${showtimeId}`);
@@ -47,7 +47,7 @@ async function initShowtimeDetailPage() {
         console.error('Lỗi khi tải thông tin suất chiếu:', err);
         alert('Không thể tải thông tin suất chiếu: ' + err.message);
     } finally {
-        toggleLoading(false); // Ẩn loading sau khi render xong
+        toggleLoading(false);
     }
 }
 
@@ -144,7 +144,7 @@ function parseRoomLayout(raw) {
     return { rows, cols, hasAisle, vipSeats, seatCodeMap };
 }
 
-// 3. RENDER GIAO DIỆN & TÍNH TỔNG DOANH THU (BAO GỒM BẮP + NƯỚC)
+// 3. RENDER GIAO DIỆN & TÍNH TỔNG DOANH THU (VẼ GHẾ CHUẨN TICKET DESK)
 function renderShowtimeDetails(data, showtimeId) {
     const regPrice = data.regularPrice || 80000;
     const vipPrice = data.vipPrice || (regPrice * 1.2);
@@ -162,7 +162,6 @@ function renderShowtimeDetails(data, showtimeId) {
     if (document.getElementById('detail-showtime-code')) document.getElementById('detail-showtime-code').value = `ST-${showtimeId}-${(data.showDate || '').replace(/-/g, '')}-P${data.roomId || '01'}`;
 
     // TÍNH DOANH THU COMBO BẮP NƯỚC & MAP DỮ LIỆU KHÁCH HÀNG
-
     seatDetailsMap = {};
     let comboRevenue = 0;
     const countedBookings = new Set();
@@ -173,7 +172,6 @@ function renderShowtimeDetails(data, showtimeId) {
                 const key = String(d.seatCode).trim().toUpperCase();
                 seatDetailsMap[key] = d;
             }
-
 
             if (d.bookingCode && !countedBookings.has(d.bookingCode)) {
                 countedBookings.add(d.bookingCode);
@@ -241,19 +239,31 @@ function renderShowtimeDetails(data, showtimeId) {
                 if (isSold || isReserved) soldNormalCount++;
             }
 
+            // VẼ GHẾ CHUẨN TICKET DESK (PHÂN BIỆT VÉ APP, QUẦY, VIP, TRỐNG)
+            const seatInfo = seatDetailsMap[seatId] || {};
+            const source = (seatInfo.source || seatInfo.paymentMethod || '').toUpperCase();
+
             let seatClass = 'seat-btn';
             let content = seatId;
             let statusAttr = 'NORMAL';
 
             if (isSold) {
-                seatClass += ' sold';
-                content = `${seatId} <i class="fa-solid fa-check ms-1" style="font-size:10px;"></i>`;
-                statusAttr = 'SOLD';
+                if (source === 'APP') {
+                    seatClass += ' sold app-ticket';
+                    content = `${seatId} <i class="fa-solid fa-mobile-screen ms-1" style="font-size:10px;"></i>`;
+                    statusAttr = 'SOLD_APP';
+                } else {
+                    seatClass += ' sold counter-ticket';
+                    content = `${seatId} <i class="fa-solid fa-check ms-1" style="font-size:10px;"></i>`;
+                    statusAttr = 'SOLD';
+                }
             } else if (isReserved) {
                 seatClass += ' reserved';
+                content = `${seatId} <i class="fa-solid fa-clock ms-1" style="font-size:10px;"></i>`;
                 statusAttr = 'RESERVED';
             } else if (isVip) {
-                seatClass += ' available-vip';
+                seatClass += ' available-vip vip';
+                content = `${seatId} <i class="fa-solid fa-crown ms-1" style="font-size:9px; color:#eab308;"></i>`;
                 statusAttr = 'VIP';
             } else {
                 seatClass += ' available-normal';
@@ -266,13 +276,13 @@ function renderShowtimeDetails(data, showtimeId) {
 
     seatingGrid.innerHTML = gridHtml;
 
-    // THỐNG KÊ DOANH THU TỔNG & CHI TIẾT
+    // THỐNG KÊ DOANH THU TỔNG & CHI TIẾT (GIỮ NGUYÊN HOÀN TOÀN)
     const totalSold = soldNormalCount + soldVipCount;
     const fillRate = totalCapacity > 0 ? Math.round((totalSold / totalCapacity) * 100) : 0;
 
     const normalRevenue = soldNormalCount * regPrice;
     const vipRevenue = soldVipCount * vipPrice;
-    const totalRevenue = normalRevenue + vipRevenue + comboRevenue; // TỔNG = Ghế Thường + VIP + Bắp Nước
+    const totalRevenue = normalRevenue + vipRevenue + comboRevenue;
 
     if (document.getElementById('detail-capacity-badge')) document.getElementById('detail-capacity-badge').textContent = `Sức chứa: ${totalCapacity} ghế`;
     if (document.getElementById('stat-tickets-count')) document.getElementById('stat-tickets-count').innerHTML = `${totalSold} <small class="fs-6 text-muted fw-normal">/ ${totalCapacity} ghế</small>`;
@@ -312,7 +322,7 @@ function setupSeatingGridEvents() {
         if (!seat) return;
 
         const status = seat.dataset.status;
-        if (status === 'SOLD' || status === 'RESERVED') {
+        if (status === 'SOLD' || status === 'SOLD_APP' || status === 'RESERVED') {
             handleSeatClick(seat.dataset.seat, seat.dataset.vip === 'true', status);
         }
     });
@@ -327,9 +337,9 @@ function showSeatTooltip(evt, seatId, status, isVip) {
     let statusText = 'Ghế trống';
     let statusColor = '#38bdf8';
 
-    if (status === 'SOLD') {
-        statusText = 'Đã bán / Thanh toán';
-        statusColor = '#ef4444';
+    if (status === 'SOLD' || status === 'SOLD_APP') {
+        statusText = status === 'SOLD_APP' ? 'Đã đặt qua APP' : 'Đã bán / Thanh toán quầy';
+        statusColor = status === 'SOLD_APP' ? '#3b82f6' : '#ef4444';
     } else if (status === 'RESERVED') {
         statusText = 'Đã đặt chỗ';
         statusColor = '#f59e0b';
@@ -350,7 +360,7 @@ function showSeatTooltip(evt, seatId, status, isVip) {
       <div><b>Suất chiếu:</b> ${showtimeStr}</div>
     `;
 
-    if (status === 'SOLD' || status === 'RESERVED') {
+    if (status === 'SOLD' || status === 'SOLD_APP' || status === 'RESERVED') {
         detailsHtml += `
         <div style="margin-top: 6px; border-top: 1px dashed #475569; padding-top: 6px; color: #f1f5f9;">
           <div><b>Khách hàng:</b> ${info.customerName || 'Đã bán'}</div>
@@ -413,7 +423,7 @@ function handleSeatClick(seatId, isVip, status) {
         comboInfo: ticketInfo.comboName ? `${ticketInfo.comboName} (${formatCurrency(ticketInfo.comboPrice)})` : 'Không sử dụng combo',
         seatPrice: formatCurrency(ticketInfo.ticketPrice || seatPrice),
         totalPrice: formatCurrency(ticketInfo.totalAmount || (seatPrice + (ticketInfo.comboPrice || 0))),
-        statusText: status === 'RESERVED' ? 'Vé đã đặt trước' : 'Vé đã thanh toán'
+        statusText: status === 'RESERVED' ? 'Vé đã đặt trước' : (status === 'SOLD_APP' ? 'Vé đặt qua App' : 'Vé đã thanh toán')
     };
 
     openTicketDetailModal(displayInfo);

@@ -47,7 +47,7 @@ public class ShowtimeSeatMapResponse {
         private String status;
         private String seatType;        // <-- thêm: VIP/NORMAL thật từ DB, không cần frontend tự đoán
         private Double ticketPrice;     // <-- thêm: giá vé thật đã lưu lúc tạo, không suy đoán lại
-
+        private String paymentMethod;
         // Thông tin cấp Booking (dùng chung cho mọi ghế trong cùng 1 đơn)
         private String bookingCode;
         private String comboName;

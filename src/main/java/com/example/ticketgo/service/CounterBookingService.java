@@ -32,35 +32,51 @@ public class CounterBookingService {
     // =========================================================================
     // 1. KIỂM TRA VÉ HỢP LỆ (Dùng cho ô Nhập mã vé / Quét QR)
     // =========================================================================
-    @Transactional(readOnly = true)
+    // Bỏ readOnly = true để cho phép ghi/sửa Database
+    @Transactional
     public TicketCheckResponse checkTicket(String ticketCode) {
         if (ticketCode == null || ticketCode.trim().isEmpty()) {
-            throw new InvalidInputException("Mã vé không được để trống!");
+            throw new InvalidInputException("Mã vé hoặc Mã đặt chỗ không được để trống!");
         }
 
-        Ticket ticket = ticketRepository.findById(ticketCode.trim())
-                .orElseThrow(() -> new ResourceNotFoundException("Mã vé [" + ticketCode + "] không tồn tại trên hệ thống!"));
+        String cleanCode = ticketCode.trim().toUpperCase();
 
+        List<Ticket> tickets = ticketRepository.findByAnyCode(cleanCode);
+        if (tickets.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy thông tin vé hoặc đơn hàng với mã [" + cleanCode + "]!");
+        }
+
+        Ticket ticket = tickets.get(0);
         LocalDateTime now = LocalDateTime.now();
 
-        // Check trạng thái vé bị hủy
         if ("CANCELLED".equalsIgnoreCase(ticket.getStatus())) {
-            throw new InvalidInputException("Vé [" + ticketCode + "] đã bị hủy trước đó!");
+            throw new InvalidInputException("Vé [" + cleanCode + "] đã bị hủy trước đó!");
         }
 
-        // Check trạng thái vé online quá hạn giữ chỗ
         if ("HOLDING".equalsIgnoreCase(ticket.getStatus())) {
             if (ticket.getHoldExpiresAt() != null && ticket.getHoldExpiresAt().isBefore(now)) {
-                throw new InvalidInputException("Vé [" + ticketCode + "] đã quá hạn giữ chỗ và chưa thanh toán!");
+                throw new InvalidInputException("Vé [" + cleanCode + "] đã quá hạn giữ chỗ!");
             }
-            throw new InvalidInputException("Vé [" + ticketCode + "] đang trong trạng thái chờ thanh toán online!");
+            throw new InvalidInputException("Vé [" + cleanCode + "] đang trong trạng thái chờ thanh toán!");
         }
 
-        // Truy vấn thông tin suất chiếu
-        Showtime showtime = showtimeRepository.findByIdWithDetails(ticket.getShowtimeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin suất chiếu của vé này!"));
+        // =========================================================================
+        // ĐỔI PAYMENT_METHOD THÀNH 'COUNTER' VÀ LƯU VÀO DATABASE
+        // =========================================================================
+        Booking booking = ticket.getBooking();
+        if (booking != null) {
+            booking.setPaymentMethod("COUNTER");
+            bookingRepository.save(booking); // Cập nhật payment_method = 'COUNTER' trong bảng booking
+        }
 
-        // Truy vấn thông tin khách hàng (nếu có)
+        for (Ticket t : tickets) {
+            t.setSource("COUNTER");
+        }
+        ticketRepository.saveAll(tickets); // Cập nhật source = 'COUNTER' trong bảng ticket
+
+        Showtime showtime = showtimeRepository.findByIdWithDetails(ticket.getShowtimeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin suất chiếu!"));
+
         String customerName = "Khách vãng lai";
         String customerPhone = "N/A";
         if (ticket.getCustomerId() != null) {
@@ -73,10 +89,11 @@ public class CounterBookingService {
 
         return TicketCheckResponse.builder()
                 .ticketId(ticket.getId())
+                .ticketCode(ticket.getTicketCode())
                 .showtimeId(showtime.getId())
                 .status(ticket.getStatus())
                 .isValid(true)
-                .message("Vé hợp lệ! Có thể cho khách vào phòng chiếu.")
+                .message("Vé hợp lệ!")
                 .customerName(customerName)
                 .customerPhone(customerPhone)
                 .movieTitle(showtime.getMovie().getTitle())
@@ -86,8 +103,10 @@ public class CounterBookingService {
                 .startTime(showtime.getStartTime())
                 .price(ticket.getPrice())
                 .createdAt(ticket.getCreatedAt())
+                .paymentMethod("COUNTER") // Trả về COUNTER
                 .build();
     }
+
 
     // =========================================================================
     // 2. TỰ ĐỘNG LẤY SUẤT CHIẾU KHI CHỌN PHIM
@@ -164,6 +183,7 @@ public class CounterBookingService {
                         .comboName(booking != null && booking.getCombo() != null ? booking.getCombo().getName() : null)
                         .comboPrice(booking != null && booking.getCombo() != null ? booking.getCombo().getTotalPrice() : null)
                         .totalAmount(booking != null && booking.getTotalAmount() != null ? booking.getTotalAmount().doubleValue() : null)
+                        .paymentMethod(booking != null && booking.getPaymentMethod() != null ? booking.getPaymentMethod() : "COUNTER") // THÊM DÒNG NÀY
                         .build());
             }
         }
@@ -307,12 +327,78 @@ public class CounterBookingService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
-    public TicketCheckAndMapResponse checkTicketAndLocate(String ticketCode) {
-        TicketCheckResponse ticketInfo = checkTicket(ticketCode); // tái dùng toàn bộ logic check hiện có
-        ShowtimeSeatMapResponse seatMap = getSeatMapByShowtime(ticketInfo.getShowtimeId()); // tái dùng luôn
+    @Transactional // BẮT BUỘC: Giúp Spring tự động ghi cập nhật xuống Database
+    public TicketCheckAndMapResponse checkTicketAndLocate(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            throw new InvalidInputException("Mã vé không được để trống!");
+        }
+
+        String cleanCode = code.trim().toUpperCase();
+        List<Ticket> tickets = ticketRepository.findByAnyCode(cleanCode);
+        if (tickets.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy thông tin vé [" + cleanCode + "]!");
+        }
+
+        Ticket ticket = tickets.get(0);
+        Booking booking = ticket.getBooking();
+
+        // 1. Lưu lại hình thức thanh toán BAN ĐẦU (để Frontend hiển thị thông báo Đặt qua App hay Mua tại quầy)
+        String originalPaymentMethod = "COUNTER";
+        if (booking != null && booking.getPaymentMethod() != null) {
+            originalPaymentMethod = booking.getPaymentMethod();
+        } else if (ticket.getSource() != null) {
+            originalPaymentMethod = ticket.getSource();
+        }
+
+        // 2. CẬP NHẬT TRỰC TIẾP XUỐNG DATABASE SANG 'COUNTER'
+        if (booking != null) {
+            booking.setPaymentMethod("COUNTER");
+            bookingRepository.save(booking); // Cập nhật bảng booking
+        }
+
+        for (Ticket t : tickets) {
+            t.setSource("COUNTER");
+        }
+        ticketRepository.saveAll(tickets); // Cập nhật bảng ticket
+
+        // 3. Chuẩn bị dữ liệu vé trả về
+        Showtime showtime = showtimeRepository.findByIdWithDetails(ticket.getShowtimeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin suất chiếu!"));
+
+        String customerName = "Khách vãng lai";
+        String customerPhone = "N/A";
+        if (ticket.getCustomerId() != null) {
+            Customer customer = customerRepository.findById(ticket.getCustomerId()).orElse(null);
+            if (customer != null) {
+                customerName = customer.getName();
+                customerPhone = customer.getPhone() != null ? customer.getPhone() : "N/A";
+            }
+        }
+
+        TicketCheckResponse ticketResponse = TicketCheckResponse.builder()
+                .ticketId(ticket.getId())
+                .ticketCode(ticket.getTicketCode())
+                .showtimeId(showtime.getId())
+                .status(ticket.getStatus())
+                .isValid(true)
+                .message("Vé hợp lệ!")
+                .customerName(customerName)
+                .customerPhone(customerPhone)
+                .movieTitle(showtime.getMovie().getTitle())
+                .roomName(showtime.getRoom().getTenPhong())
+                .seatNumber(ticket.getSeatNumber())
+                .showDate(showtime.getShowDate())
+                .startTime(showtime.getStartTime())
+                .price(ticket.getPrice())
+                .createdAt(ticket.getCreatedAt())
+                .paymentMethod(originalPaymentMethod) // Giữ hình thức ban đầu để JS báo đúng "APP"
+                .build();
+
+        // 4. Lấy sơ đồ ghế mới nhất (Lúc này DB đã mang trạng thái COUNTER -> Ghế sẽ hiển thị màu Xanh lá)
+        ShowtimeSeatMapResponse seatMap = getSeatMapByShowtime(showtime.getId());
+
         return TicketCheckAndMapResponse.builder()
-                .ticket(ticketInfo)
+                .ticket(ticketResponse)
                 .seatMap(seatMap)
                 .build();
     }
