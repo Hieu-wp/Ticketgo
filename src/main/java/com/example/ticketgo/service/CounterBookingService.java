@@ -28,6 +28,8 @@ public class CounterBookingService {
     private final CustomerRepository customerRepository;
     private final BookingRepository  bookingRepository;
     private final ComboRepository comboRepository;
+    private final ProductRepository productRepository;
+    private final PromoCodeService promoCodeService;
 
     // =========================================================================
     // 1. KIỂM TRA VÉ HỢP LỆ (Dùng cho ô Nhập mã vé / Quét QR)
@@ -211,17 +213,21 @@ public class CounterBookingService {
     // 4. TẠO VÉ BÁN TẠI QUẦY & LƯU THÔNG TIN KHÁCH HÀNG
     @Transactional
     public BookingResponse createCounterBooking(CounterBookingRequest request) {
-        // Validate dữ liệu đầu vào
+
         if (request.getSelectedSeats() == null || request.getSelectedSeats().isEmpty()) {
             throw new InvalidInputException("Vui lòng chọn ít nhất 1 ghế để tạo vé!");
         }
 
-        Showtime showtime = showtimeRepository.findByIdWithDetails(request.getShowtimeId())
+        if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
+            throw new InvalidInputException("Tên khách hàng không được để trống!");
+        }
+
+        Showtime showtime = showtimeRepository
+                .findByIdWithDetails(request.getShowtimeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Suất chiếu không tồn tại!"));
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 1. Kiểm tra tranh chấp ghế
         List<String> occupiedSeats = ticketRepository.findOccupiedSeatNumbers(
                 request.getShowtimeId(),
                 request.getSelectedSeats(),
@@ -232,56 +238,115 @@ public class CounterBookingService {
             throw new DuplicateResourceException("Các ghế sau đã có người đặt: " + String.join(", ", occupiedSeats));
         }
 
-        // 2. Lưu hoặc cập nhật thông tin Khách hàng — KHÔNG ghi đè tên, chỉ tạo mới nếu SĐT chưa tồn tại
         Customer customer;
         if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
             String phone = request.getCustomerPhone().trim();
             try {
                 customer = customerRepository.findByPhone(phone)
-                        .orElseGet(() -> customerRepository.save(Customer.builder()
-                                .name(request.getCustomerName().trim())
-                                .phone(phone)
-                                .build()));
-
+                        .orElseGet(() -> customerRepository.save(
+                                Customer.builder()
+                                        .name(request.getCustomerName().trim())
+                                        .phone(phone)
+                                        .build()
+                        ));
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
                 customer = customerRepository.findByPhone(phone)
                         .orElseThrow(() -> new ResourceNotFoundException("Không thể xử lý thông tin khách hàng, vui lòng thử lại!"));
             }
         } else {
-            customer = customerRepository.save(Customer.builder()
-                    .name(request.getCustomerName().trim())
-                    .build());
+            customer = customerRepository.save(
+                    Customer.builder()
+                            .name(request.getCustomerName().trim())
+                            .build()
+            );
         }
 
-        // 3. Xử lý Combo (nếu có)
         Combo combo = null;
+        Product popcornProduct = null;
+        Product drinkProduct = null;
+        int popcornQuantity = 0;
+        int drinkQuantity = 0;
+
         if (request.getComboId() != null && !request.getComboId().trim().isEmpty()) {
-            combo = comboRepository.findById(request.getComboId()).orElse(null);
+
+            combo = comboRepository.findByIdWithDetails(request.getComboId().trim())
+                    .orElseGet(() -> comboRepository.findById(request.getComboId().trim())
+                            .orElseThrow(() -> new ResourceNotFoundException("Combo không tồn tại!")));
+
+            popcornProduct = combo.getPopcorn();
+
+            if (popcornProduct == null) {
+                throw new InvalidInputException("Combo này chưa được cấu hình sản phẩm bắp!");
+            }
+
+            popcornQuantity = (combo.getPopcornQuantity() != null && combo.getPopcornQuantity() > 0)
+                    ? combo.getPopcornQuantity()
+                    : 1;
+
+            int popcornStock = popcornProduct.getQuantity() != null ? popcornProduct.getQuantity() : 0;
+            if (popcornStock < popcornQuantity) {
+                throw new InvalidInputException("Bắp \"" + popcornProduct.getName() + "\" không đủ số lượng. Còn " + popcornStock + ", cần " + popcornQuantity + ".");
+            }
+
+            if (combo.getDrinks() != null && !combo.getDrinks().isEmpty()) {
+
+                if (request.getSelectedDrink() == null || request.getSelectedDrink().trim().isEmpty()) {
+                    throw new InvalidInputException("Vui lòng chọn 1 loại nước cho combo!");
+                }
+
+                String drinkInput = request.getSelectedDrink().trim();
+
+                drinkProduct = productRepository.findById(drinkInput)
+                        .orElseGet(() -> productRepository.findByNameIgnoreCaseAndType(drinkInput, "DRINK")
+                                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm nước \"" + drinkInput + "\"!")));
+
+                final String targetDrinkId = drinkProduct.getId();
+                boolean drinkBelongsToCombo = combo.getDrinks().stream()
+                        .anyMatch(d -> d.getProduct() != null && d.getProduct().getId().equals(targetDrinkId))
+                        || productRepository.existsDrinkInCombo(combo.getId(), targetDrinkId);
+
+                if (!drinkBelongsToCombo) {
+                    throw new InvalidInputException("Nước \"" + drinkProduct.getName() + "\" không thuộc combo \"" + combo.getName() + "\"!");
+                }
+
+                drinkQuantity = 1;
+                int drinkStock = drinkProduct.getQuantity() != null ? drinkProduct.getQuantity() : 0;
+
+                if (drinkStock < drinkQuantity) {
+                    throw new InvalidInputException("Nước \"" + drinkProduct.getName() + "\" không đủ số lượng. Còn " + drinkStock + ".");
+                }
+            }
         }
 
-        // 4. Khởi tạo Booking (đơn hàng)
+        double seatTotal = 0.0;
+        Double regularPrice = showtime.getRegularPrice() != null ? showtime.getRegularPrice() : 80000.0;
+        Double vipPrice = showtime.getVipPrice() != null ? showtime.getVipPrice() : regularPrice + 10000.0;
+
         Booking booking = Booking.builder()
                 .customer(customer)
                 .showtime(showtime)
                 .combo(combo)
                 .guestName(request.getCustomerName().trim())
-                .selectedDrinks(request.getSelectedDrink())
-                .selectedPopcorns(request.getSelectedPopcorn())
+                .selectedDrinks(drinkProduct != null ? drinkProduct.getName() : request.getSelectedDrink())
+                .selectedPopcorns(popcornProduct != null ? popcornProduct.getName() : request.getSelectedPopcorn())
                 .paymentMethod("COUNTER")
                 .status("PAID")
                 .totalAmount(BigDecimal.ZERO)
                 .build();
-        // 5. Tính giá vé & tạo từng Ticket, gắn vào Booking qua addTicket() (Hibernate tự set booking_id)
-        double seatTotal = 0.0;
 
         for (String seatCode : request.getSelectedSeats()) {
-            boolean isVip = isVipSeat(showtime.getRoom().getSeatLayout(), seatCode);
-            double seatPrice = isVip ? showtime.getVipPrice() : showtime.getRegularPrice();
+            if (seatCode == null || seatCode.trim().isEmpty()) {
+                throw new InvalidInputException("Mã ghế không hợp lệ!");
+            }
+
+            String cleanSeatCode = seatCode.trim().toUpperCase();
+            boolean isVip = isVipSeat(showtime.getRoom().getSeatLayout(), cleanSeatCode);
+            double seatPrice = isVip ? vipPrice : regularPrice;
             seatTotal += seatPrice;
 
             Ticket ticket = Ticket.builder()
                     .showtimeId(showtime.getId())
-                    .seatNumber(seatCode)
+                    .seatNumber(cleanSeatCode)
                     .seatType(isVip ? "VIP" : "NORMAL")
                     .price(seatPrice)
                     .customerId(customer.getId())
@@ -289,19 +354,43 @@ public class CounterBookingService {
                     .source("COUNTER")
                     .holdExpiresAt(null)
                     .build();
-            // KHÔNG set .id() thủ công nữa -> để Ticket.@PrePersist tự sinh id + ticketCode đúng chuẩn
 
-            booking.addTicket(ticket); // gắn 2 chiều: ticket.booking = booking
+            booking.addTicket(ticket);
         }
 
-        double comboTotal = combo != null && combo.getTotalPrice() != null ? combo.getTotalPrice() : 0.0;
-        booking.setTotalAmount(BigDecimal.valueOf(seatTotal + comboTotal));
+        double comboTotal = (combo != null && combo.getTotalPrice() != null) ? combo.getTotalPrice() : 0.0;
+        BigDecimal subtotal = BigDecimal.valueOf(seatTotal + comboTotal);
 
-        // 6. Chỉ cần save Booking — cascade ALL tự lưu toàn bộ Ticket bên trong nó
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (request.getPromoCode() != null && !request.getPromoCode().trim().isEmpty()) {
+            discountAmount = promoCodeService.consumePromoCode(request.getPromoCode(), subtotal);
+        }
+
+        BigDecimal finalAmount = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
+        booking.setTotalAmount(finalAmount);
+
         Booking savedBooking = bookingRepository.save(booking);
 
-        // 7. Build ticketDetails SAU khi save (lúc này id/ticketCode của từng Ticket đã được sinh)
-        List<BookingResponse.TicketDetail> ticketDetails = savedBooking.getTickets().stream()
+        if (combo != null) {
+            int currentPopcornStock = popcornProduct.getQuantity() != null ? popcornProduct.getQuantity() : 0;
+            if (currentPopcornStock < popcornQuantity) {
+                throw new InvalidInputException("Bắp \"" + popcornProduct.getName() + "\" vừa hết hàng. Vui lòng chọn combo khác!");
+            }
+            popcornProduct.setQuantity(currentPopcornStock - popcornQuantity);
+            productRepository.save(popcornProduct);
+
+            if (drinkProduct != null) {
+                int currentDrinkStock = drinkProduct.getQuantity() != null ? drinkProduct.getQuantity() : 0;
+                if (currentDrinkStock < drinkQuantity) {
+                    throw new InvalidInputException("Nước \"" + drinkProduct.getName() + "\" vừa hết hàng. Vui lòng chọn loại nước khác!");
+                }
+                drinkProduct.setQuantity(currentDrinkStock - drinkQuantity);
+                productRepository.save(drinkProduct);
+            }
+        }
+
+        List<BookingResponse.TicketDetail> ticketDetails = savedBooking.getTickets()
+                .stream()
                 .map(t -> BookingResponse.TicketDetail.builder()
                         .ticketId(t.getId())
                         .ticketCode(t.getTicketCode())
@@ -310,7 +399,6 @@ public class CounterBookingService {
                         .build())
                 .collect(java.util.stream.Collectors.toList());
 
-        // 8. Trả về BookingResponse chuẩn hóa, dùng đúng id/mã do Booking entity tự sinh
         return BookingResponse.builder()
                 .bookingId(savedBooking.getId())
                 .bookingCode(savedBooking.getBookingCode())
@@ -327,7 +415,7 @@ public class CounterBookingService {
                 .build();
     }
 
-    @Transactional // BẮT BUỘC: Giúp Spring tự động ghi cập nhật xuống Database
+    @Transactional
     public TicketCheckAndMapResponse checkTicketAndLocate(String code) {
         if (code == null || code.trim().isEmpty()) {
             throw new InvalidInputException("Mã vé không được để trống!");

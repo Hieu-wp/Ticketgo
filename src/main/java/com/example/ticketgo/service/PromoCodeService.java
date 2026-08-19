@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +71,7 @@ public class PromoCodeService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy mã giảm giá cần cập nhật"));
 
         dto.setId(id);
-        validatePromoCodeInput(dto);
+        validatePromoCodeInput(dto, true);
 
         if (promoCodeRepository.existsByCodeAndIdNot(dto.getCode().trim().toUpperCase(), id)) {
             throw new RuntimeException("Mã giảm giá '" + dto.getCode() + "' đã bị trùng với chương trình khác");
@@ -104,29 +106,162 @@ public class PromoCodeService {
         return toDTO(updated);
     }
 
-    // Bắt buộc xóa hàm validate cũ ở dòng 140 và giữ lại duy nhất 1 hàm đã sửa so sánh BigDecimal dưới đây
-    private void validatePromoCodeInput(PromoCodeDTO dto) {
-        if (dto.getCode() == null || dto.getCode().trim().isEmpty()) {
-            throw new RuntimeException("Mã giảm giá không được để trống");
+    // 5. KIỂM TRA MÃ GIẢM GIÁ KHI BÁN VÉ TẠI QUẦY (Không tăng used_count ở bước kiểm tra)
+    @Transactional(readOnly = true)
+    public Map<String, Object> checkPromoCode(String code, BigDecimal orderTotal) {
+        if (code == null || code.trim().isEmpty()) {
+            throw new RuntimeException("Vui lòng nhập mã giảm giá!");
+        }
+        if (orderTotal == null) {
+            throw new RuntimeException("Thiếu thông tin tổng đơn hàng!");
         }
 
-        // So sánh BigDecimal với 0 bằng compareTo
-        if (dto.getDiscountValue() == null || dto.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Giá trị giảm giá phải lớn hơn 0");
+        PromoCode promo = promoCodeRepository.findByCode(code.trim().toUpperCase())
+                .orElseThrow(() -> new RuntimeException("Mã giảm giá không tồn tại!"));
+
+        if (!Boolean.TRUE.equals(promo.getIsActive())) {
+            throw new RuntimeException("Mã giảm giá đã bị vô hiệu hóa!");
         }
 
-        // So sánh BigDecimal với 100 bằng compareTo
-        if ("percent".equalsIgnoreCase(dto.getDiscountType())
-                && dto.getDiscountValue().compareTo(new BigDecimal("100")) > 0) {
-            throw new RuntimeException("Mức giảm giá theo phần trăm không được vượt quá 100%");
+        LocalDate today = LocalDate.now();
+        if (promo.getStartDate() == null || promo.getEndDate() == null ||
+                today.isBefore(promo.getStartDate()) || today.isAfter(promo.getEndDate())) {
+            throw new RuntimeException("Mã giảm giá đã hết hạn hoặc chưa đến ngày áp dụng!");
         }
 
-        if (dto.getStartDate() != null && dto.getEndDate() != null && dto.getEndDate().isBefore(dto.getStartDate())) {
-            throw new RuntimeException("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        int usedCount = promo.getUsedCount() != null ? promo.getUsedCount() : 0;
+        int usageLimit = promo.getUsageLimit() != null ? promo.getUsageLimit() : 0;
+        if (usedCount >= usageLimit) {
+            throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng!");
         }
+
+        BigDecimal minOrder = promo.getMinOrder() != null ? promo.getMinOrder() : BigDecimal.ZERO;
+        if (orderTotal.compareTo(minOrder) < 0) {
+            throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu " + minOrder + "đ để áp dụng mã này!");
+        }
+
+        BigDecimal discount;
+        if ("percent".equalsIgnoreCase(promo.getDiscountType())) {
+            discount = orderTotal.multiply(promo.getDiscountValue()).divide(BigDecimal.valueOf(100));
+            if (promo.getMaxDiscount() != null && discount.compareTo(promo.getMaxDiscount()) > 0) {
+                discount = promo.getMaxDiscount();
+            }
+        } else {
+            discount = promo.getDiscountValue();
+        }
+
+        if (discount.compareTo(orderTotal) > 0) {
+            discount = orderTotal;
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("promoId", promo.getId());
+        result.put("code", promo.getCode());
+        result.put("name", promo.getName());
+        result.put("discountAmount", discount);
+        return result;
     }
 
-    // 5. XÓA VOUCHER
+    @Transactional
+    public BigDecimal consumePromoCode(String code, BigDecimal orderTotal) {
+
+        if (code == null || code.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Tổng đơn hàng không hợp lệ!");
+        }
+
+        String cleanCode = code.trim().toUpperCase();
+
+        PromoCode promo = promoCodeRepository.findByCodeForUpdate(cleanCode)
+                .orElseThrow(() ->
+                        new RuntimeException("Mã giảm giá không tồn tại!"));
+
+        if (!Boolean.TRUE.equals(promo.getIsActive())) {
+            throw new RuntimeException(
+                    "Mã giảm giá đã bị vô hiệu hóa!"
+            );
+        }
+
+        LocalDate today = LocalDate.now();
+
+        if (promo.getStartDate() == null ||
+                promo.getEndDate() == null ||
+                today.isBefore(promo.getStartDate()) ||
+                today.isAfter(promo.getEndDate())) {
+
+            throw new RuntimeException(
+                    "Mã giảm giá đã hết hạn hoặc chưa đến ngày áp dụng!"
+            );
+        }
+
+        int usedCount = promo.getUsedCount() != null
+                ? promo.getUsedCount()
+                : 0;
+
+        int usageLimit = promo.getUsageLimit() != null
+                ? promo.getUsageLimit()
+                : 0;
+
+        if (usedCount >= usageLimit) {
+            throw new RuntimeException(
+                    "Mã giảm giá đã hết lượt sử dụng!"
+            );
+        }
+
+        BigDecimal minOrder = promo.getMinOrder() != null
+                ? promo.getMinOrder()
+                : BigDecimal.ZERO;
+
+        if (orderTotal.compareTo(minOrder) < 0) {
+            throw new RuntimeException(
+                    "Đơn hàng chưa đạt giá trị tối thiểu "
+                            + minOrder
+                            + "đ để áp dụng mã này!"
+            );
+        }
+
+        BigDecimal discount;
+
+        if ("percent".equalsIgnoreCase(promo.getDiscountType())) {
+
+            discount = orderTotal
+                    .multiply(promo.getDiscountValue())
+                    .divide(
+                            BigDecimal.valueOf(100)
+                    );
+
+            if (promo.getMaxDiscount() != null &&
+                    discount.compareTo(promo.getMaxDiscount()) > 0) {
+
+                discount = promo.getMaxDiscount();
+            }
+
+        } else {
+
+            discount = promo.getDiscountValue();
+        }
+
+        if (discount == null ||
+                discount.compareTo(BigDecimal.ZERO) < 0) {
+
+            discount = BigDecimal.ZERO;
+        }
+
+        if (discount.compareTo(orderTotal) > 0) {
+            discount = orderTotal;
+        }
+
+        promo.setUsedCount(usedCount + 1);
+
+        promoCodeRepository.save(promo);
+
+        return discount;
+    }
+
+    // 6. XÓA VOUCHER
     @Transactional
     public void delete(String id) {
         if (!promoCodeRepository.existsById(id)) {
@@ -137,7 +272,6 @@ public class PromoCodeService {
 
     // === BẮT TẤT CẢ NGOẠI LỆ / VALIDATE DỮ LIỆU ĐẦU VÀO ===
     private void validatePromoCodeInput(PromoCodeDTO dto, boolean isUpdate) {
-        // Kiểm tra trống ô input
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
             throw new RuntimeException("Tên chương trình không được để trống");
         }
@@ -168,8 +302,8 @@ public class PromoCodeService {
         if (!isUpdate && dto.getStartDate().isBefore(today)) {
             throw new RuntimeException("Ngày bắt đầu phải từ ngày hôm nay trở đi");
         }
-        if (dto.getEndDate().isBefore(today) || dto.getEndDate().isEqual(today)) {
-            throw new RuntimeException("Ngày kết thúc phải lớn hơn ngày hôm nay");
+        if (dto.getEndDate().isBefore(today)) {
+            throw new RuntimeException("Ngày kết thúc phải lớn hơn hoặc bằng ngày hôm nay");
         }
         if (dto.getEndDate().isBefore(dto.getStartDate())) {
             throw new RuntimeException("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");

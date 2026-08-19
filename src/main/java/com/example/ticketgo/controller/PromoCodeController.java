@@ -11,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/promo-codes")
@@ -21,14 +23,10 @@ public class PromoCodeController {
 
     private final PromoCodeService promoCodeService;
 
-
     @GetMapping
     public String showPromocodePage() {
-        // Tìm file: src/main/resources/templates/promocode.html (nên dùng chữ viết thường)
-        return "Promocode";
+        return "promocode";
     }
-
-
 
     // LẤY DANH SÁCH + TÌM KIẾM + LỌC + PHÂN TRANG
     @GetMapping("/api")
@@ -61,6 +59,20 @@ public class PromoCodeController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(PromoCodeResponse.error(e.getMessage()));
+        }
+    }
+
+    // KIỂM TRA MÃ GIẢM GIÁ KHI BÁN VÉ TẠI QUẦY
+    @GetMapping("/api/check")
+    @ResponseBody
+    public ResponseEntity<PromoCodeResponse<Map<String, Object>>> checkPromoCode(
+            @RequestParam String code,
+            @RequestParam BigDecimal orderTotal) {
+        try {
+            Map<String, Object> result = promoCodeService.checkPromoCode(code, orderTotal);
+            return ResponseEntity.ok(PromoCodeResponse.success(result, "Áp dụng mã giảm giá thành công"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(PromoCodeResponse.error(e.getMessage()));
         }
     }
 

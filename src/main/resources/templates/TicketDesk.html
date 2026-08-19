@@ -58,88 +58,460 @@
         <!-- 2. TẠO VÉ BÁN TẠI QUẦY -->
         <div class="col-lg-7">
             <div class="card-custom h-100">
+
+                <!-- Header -->
                 <div class="card-header-custom">
-                    <i class="fa-solid fa-ticket"></i> Tạo vé bán tại quầy
+                    <i class="fa-solid fa-ticket me-2"></i>
+                    Tạo vé bán tại quầy
                 </div>
+
                 <div class="card-body-custom">
+
                     <form id="create-ticket-form" onsubmit="createTicket(event)">
-                        <!-- Thông tin khách -->
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label-custom" for="customer-name">Họ tên khách hàng</label>
-                                <input type="text" class="form-control form-control-custom" id="customer-name" name="customerName" placeholder="Nhập họ tên khách hàng" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom" for="customer-phone">Số điện thoại</label>
-                                <input type="tel" class="form-control form-control-custom" id="customer-phone" name="customerPhone" placeholder="09xx xxx xxx">
-                            </div>
+
+                        <!-- =========================
+                             1. THÔNG TIN KHÁCH HÀNG
+                             ========================= -->
+                        <div class="section-title mb-3">
+                            <i class="fa-solid fa-user me-2"></i>
+                            Thông tin khách hàng
                         </div>
 
-                        <!-- Chọn phim + Combo -->
-                        <div class="row g-3 mb-3">
+                        <div class="row g-3 mb-4">
+
                             <div class="col-md-6">
-                                <label class="form-label-custom" for="movie-select">Chọn phim</label>
-                                <select class="form-select form-select-custom" id="movie-select" name="movieId" required onchange="onMovieChange()">
-                                    <option value="">-- Chọn tên phim --</option>
+                                <label class="form-label-custom" for="customer-name">
+                                    Họ tên khách hàng <span class="text-danger">*</span>
+                                </label>
+
+                                <input
+                                        type="text"
+                                        class="form-control form-control-custom"
+                                        id="customer-name"
+                                        name="customerName"
+                                        placeholder="Nhập họ tên khách hàng"
+                                        autocomplete="off"
+                                        required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="customer-phone">
+                                    Số điện thoại
+                                </label>
+
+                                <input
+                                        type="tel"
+                                        class="form-control form-control-custom"
+                                        id="customer-phone"
+                                        name="customerPhone"
+                                        placeholder="09xx xxx xxx"
+                                        autocomplete="off">
+                            </div>
+
+                        </div>
+
+
+                        <!-- =========================
+                             2. CHỌN PHIM
+                             ========================= -->
+                        <div class="section-title mb-3">
+                            <i class="fa-solid fa-film me-2"></i>
+                            Thông tin suất chiếu
+                        </div>
+
+                        <div class="row g-3 mb-3">
+
+                            <div class="col-md-12">
+                                <label class="form-label-custom" for="movie-select">
+                                    Chọn phim <span class="text-danger">*</span>
+                                </label>
+
+                                <select
+                                        class="form-select form-select-custom"
+                                        id="movie-select"
+                                        name="movieId"
+                                        required
+                                        onchange="onMovieChange()">
+
+                                    <option value="">
+                                        -- Chọn tên phim --
+                                    </option>
+
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom" for="combo-select">Combo bắp &amp; nước</label>
-                                <select class="form-select form-select-custom" id="combo-select" name="comboId" onchange="onComboChange()">
-                                    <option value="">-- Không chọn combo --</option>
-                                </select>
-                            </div>
+
                         </div>
 
-                        <!-- Checklist tùy chọn combo: Nước | Bắp -->
-                        <div class="combo-options" id="combo-options" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <div class="combo-col-title"><i class="fa-solid fa-glass-water"></i> Nước</div>
-                                    <p class="combo-hint" id="drink-hint">Chọn loại nước</p>
-                                    <div id="drink-list"></div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="combo-col-title"><i class="fa-solid fa-bowl-food"></i> Bắp</div>
-                                    <p class="combo-hint" id="popcorn-hint">Chọn vị bắp</p>
-                                    <div id="popcorn-list"></div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Danh sách suất chiếu -->
-                        <div class="mb-3" id="showtime-section" style="display:none;">
-                            <label class="form-label-custom">Suất chiếu</label>
+                        <!-- =========================
+                             3. DANH SÁCH SUẤT CHIẾU
+                             ========================= -->
+                        <div
+                                class="mb-4"
+                                id="showtime-section"
+                                style="display:none;">
+
+                            <label class="form-label-custom mb-2">
+                                Chọn suất chiếu <span class="text-danger">*</span>
+                            </label>
+
                             <div id="showtime-list"></div>
+
                         </div>
 
-                        <!-- Tổng tiền + nút tạo -->
-                        <div id="checkout-section" style="display:none;">
-                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3 mb-3"
-                                 style="background:#faf5ff; border:1px solid #e9d5ff;">
-                                <div>
-                                    <span class="text-muted fw-semibold">Ghế đã chọn: </span>
-                                    <span class="fw-bold" style="color:#7c3aed;" id="selected-seats-label">—</span>
-                                </div>
-                                <div>
-                                    <span class="text-muted fw-semibold me-2">Tổng:</span>
-                                    <span class="fs-5 fw-bold" style="color:#7c3aed;" id="total-price">0 ₫</span>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-purple w-100" id="btn-create" disabled>
-                                <i class="fa-solid fa-check-circle me-2"></i> Tạo vé &amp; Thanh toán
-                            </button>
+
+                        <!-- =========================
+                             4. COMBO
+                             ========================= -->
+                        <div class="section-title mb-3">
+                            <i class="fa-solid fa-box-open me-2"></i>
+                            Combo bắp & nước
                         </div>
+
+                        <div class="row g-3 mb-3">
+
+                            <div class="col-md-12">
+
+                                <label
+                                        class="form-label-custom"
+                                        for="combo-select">
+
+                                    Chọn combo
+                                </label>
+
+                                <select
+                                        class="form-select form-select-custom"
+                                        id="combo-select"
+                                        name="comboId"
+                                        onchange="onComboChange()">
+
+                                    <option value="">
+                                        -- Không chọn combo --
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =========================
+                             5. CHỌN SẢN PHẨM TRONG COMBO
+                             ========================= -->
+                        <div
+                                class="combo-options mb-4"
+                                id="combo-options"
+                                style="display:none;">
+
+                            <div class="row g-3">
+
+                                <!-- NƯỚC -->
+                                <div class="col-md-6">
+
+                                    <div class="combo-selection-card">
+
+                                        <div class="combo-col-title">
+                                            <i class="fa-solid fa-glass-water me-2"></i>
+                                            Nước
+                                        </div>
+
+                                        <p
+                                                class="combo-hint"
+                                                id="drink-hint">
+
+                                            Chọn 1 loại nước
+                                        </p>
+
+                                        <div id="drink-list"></div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- BẮP -->
+                                <div class="col-md-6">
+
+                                    <div class="combo-selection-card">
+
+                                        <div class="combo-col-title">
+                                            <i class="fa-solid fa-bowl-food me-2"></i>
+                                            Bắp
+                                        </div>
+
+                                        <p
+                                                class="combo-hint"
+                                                id="popcorn-hint">
+
+                                            Sản phẩm bắp trong combo
+                                        </p>
+
+                                        <div id="popcorn-list"></div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =========================
+                             6. SƠ ĐỒ GHẾ
+                             ========================= -->
+                        <div class="section-title mb-3">
+                            <i class="fa-solid fa-couch me-2"></i>
+                            Chọn ghế
+                        </div>
+
+                        <div
+                                id="checkout-section"
+                                style="display:none;">
+
+                            <!-- Thông tin ghế -->
+                            <div
+                                    class="selected-seat-summary p-3 rounded-3 mb-3"
+                                    style="
+                            background:#faf5ff;
+                            border:1px solid #e9d5ff;
+                        ">
+
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+                                    <div>
+                                <span class="text-muted fw-semibold">
+                                    Ghế đã chọn:
+                                </span>
+
+                                        <span
+                                                class="fw-bold"
+                                                style="color:#7c3aed;"
+                                                id="selected-seats-label">
+
+                                    —
+                                </span>
+                                    </div>
+
+                                    <div>
+                                <span class="text-muted fw-semibold me-2">
+                                    Tiền vé:
+                                </span>
+
+                                        <span
+                                                class="fw-bold"
+                                                style="color:#7c3aed;"
+                                                id="seat-price">
+
+                                    0 ₫
+                                </span>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 7. THÔNG TIN COMBO + GIẢM GIÁ
+                                 ========================= -->
+                            <div class="row g-3 mb-3">
+
+                                <!-- Tiền combo -->
+                                <div class="col-md-6">
+
+                                    <div
+                                            class="p-3 rounded-3 h-100"
+                                            style="
+                                    background:#f8fafc;
+                                    border:1px solid #e2e8f0;
+                                ">
+
+                                        <div class="d-flex justify-content-between">
+
+                                    <span class="text-muted fw-semibold">
+                                        Tiền combo
+                                    </span>
+
+                                            <span
+                                                    class="fw-bold"
+                                                    id="combo-price">
+
+                                        0 ₫
+                                    </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- Giảm giá -->
+                                <div class="col-md-6">
+
+                                    <div
+                                            class="p-3 rounded-3 h-100"
+                                            style="
+                                    background:#f0fdf4;
+                                    border:1px solid #bbf7d0;
+                                ">
+
+                                        <div class="d-flex justify-content-between">
+
+                                    <span class="text-muted fw-semibold">
+                                        Giảm giá
+                                    </span>
+
+                                            <span
+                                                    class="fw-bold text-success"
+                                                    id="discount-price">
+
+                                        -0 ₫
+                                    </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 8. MÃ GIẢM GIÁ
+                                 ========================= -->
+                            <div class="mb-3">
+
+                                <label
+                                        class="form-label-custom"
+                                        for="promo-code-input">
+
+                                    Mã giảm giá
+                                </label>
+
+                                <div class="input-group">
+
+                                    <input
+                                            type="text"
+                                            class="form-control form-control-custom"
+                                            id="promo-code-input"
+                                            placeholder="Nhập mã giảm giá"
+                                            autocomplete="off">
+
+                                    <button
+                                            type="button"
+                                            class="btn btn-outline-primary"
+                                            onclick="applyPromoCode()">
+
+                                        <i class="fa-solid fa-tag me-1"></i>
+                                        Áp dụng
+                                    </button>
+
+                                    <button
+                                            type="button"
+                                            class="btn btn-outline-secondary"
+                                            onclick="removePromoCode()">
+
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+
+                                </div>
+
+                                <div
+                                        id="promo-code-message"
+                                        class="text-muted small mt-1">
+                                </div>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 9. TỔNG THANH TOÁN
+                                 ========================= -->
+                            <div
+                                    class="p-3 rounded-3 mb-3"
+                                    style="
+                            background:#faf5ff;
+                            border:1px solid #e9d5ff;
+                        ">
+
+                                <div class="d-flex justify-content-between align-items-center">
+
+                            <span
+                                    class="fw-bold"
+                                    style="font-size:1rem;">
+
+                                Tổng thanh toán
+                            </span>
+
+                                    <span
+                                            class="fs-4 fw-bold"
+                                            style="color:#7c3aed;"
+                                            id="total-price">
+
+                                0 ₫
+                            </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 10. NÚT TẠO VÉ
+                                 ========================= -->
+                            <button
+                                    type="submit"
+                                    class="btn btn-purple w-100"
+                                    id="btn-create"
+                                    disabled>
+
+                                <i class="fa-solid fa-check-circle me-2"></i>
+                                Tạo vé & Thanh toán
+
+                            </button>
+
+                        </div>
+
                     </form>
 
-                    <div class="result-box valid" id="create-result" style="display: none;">
+                    <div
+                            class="result-box valid mt-3"
+                            id="create-result"
+                            style="display:none;">
+
                         <div class="text-center mb-2">
-                            <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:#059669;"></i>
+
+                            <i
+                                    class="fa-solid fa-circle-check"
+                                    style="
+                            font-size:2.2rem;
+                            color:#059669;
+                        ">
+                            </i>
+
                         </div>
-                        <h5 class="text-center mb-3" style="font-weight:700; color:#059669;">Tạo vé thành công</h5>
+
+                        <h5
+                                class="text-center mb-3"
+                                style="
+                        font-weight:700;
+                        color:#059669;
+                    ">
+
+                            Tạo vé thành công
+
+                        </h5>
+
                         <div id="create-result-details"></div>
+
                     </div>
+
                 </div>
+
             </div>
         </div>
     </div>
