@@ -126,11 +126,12 @@
         <a href="/customers" class="nav-link"><i class="fa-solid fa-users"></i> Quản lý khách hàng</a>
         <a href="/admin/ticket-desk" class="nav-link"><i class="fa-solid fa-credit-card"></i> Quản lý quầy vé</a>
         <a href="/analytics" class="nav-link"><i class="fa-solid fa-ticket"></i> Thống kê doanh số</a>
-        <a href="/login" class="nav-link"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</a>
+        <a href="#" id="logoutBtn" class="nav-link"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</a>
     </div>
 
-    <!-- Nhúng trực tiếp file JS xử lý vào đây -->
+
     <script th:src="@{/js/sidebar.js}"></script>
+    <script th:src="@{/js/logout.js}"></script>
 </div>
 
 </body>

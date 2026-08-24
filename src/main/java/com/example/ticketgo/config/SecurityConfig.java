@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
@@ -20,9 +21,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Đã bỏ bean AuthenticationManager (authConfig.getAuthenticationManager())
-    // vì AuthService tự xử lý xác thực bằng passwordEncoder.matches(),
-    // không cần AuthenticationManager -> tránh lỗi StackOverflowError.
+
 
     @Bean
     public SecurityContextRepository securityContextRepository() {
@@ -45,6 +44,22 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/login", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error").permitAll()
                         .anyRequest().authenticated()
+                )
+
+                // Khi chưa đăng nhập mà truy cập trang cần xác thực -> chuyển hướng về /login
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                )
+
+                // Đăng xuất: xoá session + SecurityContext, sau đó chuyển về /login
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                        .permitAll()
                 );
 
         return http.build();
